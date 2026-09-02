@@ -2,7 +2,8 @@
 # 产物进入 dist/，包含两个版本（目录结构一致，区别仅在于是否内置 .NET）：
 #   dist/ScriptManagerPortable/  自包含单文件 exe（内置 .NET 运行时，开箱即用）
 #   dist/ScriptManager/          依赖框架版（不内置 .NET，需用户机器已安装 .NET 运行时）
-# 两个目录均含：ScriptManager.exe + script\（脚本目录）+ lib\（第三方依赖，如 jar）+ cache\（缓存）+ log\（日志）+ config\（用户配置文件），与 exe 同级，用户可编辑。
+# 两个目录均含：ScriptManager.exe + script\（脚本目录）+ lib\（第三方依赖，如 jar）+ config\（用户配置文件），与 exe 同级，用户可编辑。
+# cache\（缓存）与 log\（日志）不预生成，运行时由程序在 exe 同级自动创建。
 #
 # 用法：
 #   .\build.ps1                        # 自动探测 dotnet 与架构，默认构建 Both
@@ -12,6 +13,7 @@
 #   .\build.ps1 -Edition Portable      # 仅构建便携版（自包含，内置 .NET）
 #   .\build.ps1 -Edition Standard      # 仅构建标准版（依赖框架，需用户机器装 .NET）
 #   .\build.ps1 -Edition Both          # 便携版 + 标准版都构建（默认）
+#   .\build.ps1 -Launch                 # 构建完成后自动启动 exe（默认不启动）
 
 param(
     [string]$DotNet = "",
@@ -19,7 +21,8 @@ param(
     [string]$Configuration = "Release",
     [switch]$InstallSdk,
     [ValidateSet("Portable", "Standard", "Both")]
-    [string]$Edition = "Both"
+    [string]$Edition = "Both",
+    [switch]$Launch
 )
 
 $ErrorActionPreference = "Stop"
@@ -282,16 +285,8 @@ function Assemble-Dist {
         Write-Host "==> 已复制依赖目录 -> $libDst"
     }
 
-    # 2.55) 图标资源目录：assets/ -> outDir/assets/（与 exe 同级，供 SVG 图标按需加载，用户可替换）
-    $assetsSrc = Join-Path $rootDir "assets"
-    $assetsDst = Join-Path $outDir "assets"
-    if (-not (Test-Path $assetsDst)) { New-Item -ItemType Directory -Path $assetsDst -Force | Out-Null }
-    if (Test-Path $assetsSrc) {
-        if (Test-Path $assetsDst) { Remove-Item $assetsDst -Recurse -Force -ErrorAction SilentlyContinue }
-        if (-not (Test-Path $assetsDst)) { New-Item -ItemType Directory -Path $assetsDst -Force | Out-Null }
-        Copy-Item "$assetsSrc\*" $assetsDst -Recurse -Force
-        Write-Host "==> 已复制图标资源 -> $assetsDst"
-    }
+    # 2.55) 图标资源（assets/images）已全部内嵌进 exe（csproj 的 EmbeddedResource/Resource），
+    #       运行期通过 GetManifestResourceStream / pack URI 从程序集加载，无需磁盘目录，故不复制。
 
     # 2.6) 确保 lib 下各语言约定子目录存在（缺失则自动创建）。
     # 约定子目录名固定，放错名称（如 java1/nodejs）不生效；此处仅兜底创建标准约定目录。
@@ -325,11 +320,6 @@ function Assemble-Dist {
         Write-Host "==> 已复制用户配置文件 -> $configDst"
     }
 
-    # 4) 预创建运行时生成的空目录，使 dist 结构与预期一致（运行时若缺失会自动创建）
-    foreach ($sub in @("cache", "log")) {
-        $dir = Join-Path $outDir $sub
-        if (-not (Test-Path $dir)) { New-Item -ItemType Directory -Path $dir -Force | Out-Null }
-    }
 }
 
 # ---- 按所选版本构建 ----
@@ -366,7 +356,8 @@ if ($Edition -eq "Portable" -or $Edition -eq "Both") {
 if ($Edition -eq "Standard" -or $Edition -eq "Both") {
     Write-Host "    - $simpleDir    （依赖框架，需用户机器安装 .NET 运行时）"
 }
-Write-Host "    目录结构一致：ScriptManager.exe + script\ + lib\ + cache\ + log\ + config\，与 exe 同级，用户可编辑。"
+Write-Host "    目录结构一致：ScriptManager.exe + script\ + lib\ + config\，与 exe 同级，用户可编辑。"
+Write-Host "    （cache\ 与 log\ 不打包，运行时由程序自动创建）"
 
 # 打包成功，清理可能残留的 error.log（若有），避免误导用户以为上次失败
 foreach ($d in @($portableDir, $simpleDir)) {
@@ -381,8 +372,10 @@ foreach ($d in @($portableDir, $simpleDir)) {
     exit 1
 }
 
-# 打包成功后自动打开所构建的版本（Both 时默认打开标准版）
-$launchDir = if ($Edition -eq "Portable") { $portableDir } else { $simpleDir }
-$launchExe = Join-Path $launchDir "ScriptManager.exe"
-Write-Host "==> 正在启动 $launchExe ..."
-Start-Process -FilePath $launchExe
+# 打包成功后按需自动启动（由 -Launch 控制；Both 时默认启动标准版）
+if ($Launch) {
+    $launchDir = if ($Edition -eq "Portable") { $portableDir } else { $simpleDir }
+    $launchExe = Join-Path $launchDir "ScriptManager.exe"
+    Write-Host "==> 正在启动 $launchExe ..."
+    Start-Process -FilePath $launchExe
+}
