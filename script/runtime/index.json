@@ -1,0 +1,262 @@
+[
+  {
+    "name": "运行时环境检测",
+    "path": "./Get-RuntimeEnv.ps1",
+    "lang": "powershell"
+  },
+  {
+    "name": "安装 Java 运行时环境",
+    "path": "./Install-Java.ps1",
+    "lang": "powershell",
+    "admin": true,
+    "params": [
+      {
+        "name": "DISTRO",
+        "label": "发行版",
+        "default": "Oracle OpenJDK",
+        "required": true,
+        "options": [
+          "Oracle OpenJDK",
+          "Microsoft OpenJDK",
+          "Alibaba Dragonwell"
+        ],
+        "placeholder": "选择 JDK 发行版：Oracle 官方 / Microsoft 构建 / 阿里 Dragonwell"
+      },
+      {
+        "name": "INSTALL_DIR",
+        "label": "安装目录",
+        "default": "",
+        "required": false,
+        "type": "folder",
+        "placeholder": "默认安装至程序 runtime 目录"
+      },
+      {
+        "name": "VERSION",
+        "label": "版本",
+        "default": "25 (LTS)",
+        "required": true,
+        "options": [
+          "25 (LTS)",
+          "21 (LTS)",
+          "17 (LTS)"
+        ],
+        "placeholder": "选择要安装的 JDK 主版本"
+      },
+      {
+        "name": "OVERWRITE",
+        "label": "覆盖原文件",
+        "default": "否",
+        "required": true,
+        "options": [ "是", "否" ],
+        "placeholder": "该版本 JDK 目录已存在时是否进行覆盖"
+      },
+      {
+        "name": "SET_JAVA_HOME",
+        "label": "设置 JAVA_HOME",
+        "default": "否",
+        "required": true,
+        "options": [ "是", "否" ],
+        "placeholder": "是否设置环境变量 JAVA_HOME"
+      },
+      {
+        "name": "SET_PATH",
+        "label": "设置 PATH",
+        "default": "否",
+        "required": true,
+        "options": [ "是", "否" ],
+        "placeholder": "是否设置环境变量 PATH"
+      }
+    ]
+  },
+  {
+    "name": "安装 Python 运行时环境",
+    "path": "./Install-Python.ps1",
+    "lang": "powershell",
+    "admin": true,
+    "params": [
+      {
+        "name": "INSTALL_DIR",
+        "label": "安装目录",
+        "default": "",
+        "required": false,
+        "type": "folder",
+        "placeholder": "默认安装至程序的 runtime 目录"
+      },
+      {
+        "name": "VERSION",
+        "label": "Python 版本",
+        "default": "Python 3.12",
+        "required": true,
+        "options": [
+          "Python 3.14",
+          "Python 3.13",
+          "Python 3.12",
+          "Python 3.11",
+          "Python 3.10"
+        ],
+        "placeholder": "选择要安装的 Python 版本（ARM64 机器仅支持 3.11 及以上）"
+      },
+      {
+        "name": "DOWNLOAD_SOURCE",
+        "label": "下载源",
+        "default": "华为云镜像",
+        "required": true,
+        "options": [ "华为云镜像", "GitHub 官方" ],
+        "placeholder": "华为云镜像国内直连快（官方安装器）；GitHub 官方为解压即用包"
+      },
+      {
+        "name": "MIRROR_PREFIX",
+        "label": "代理前缀",
+        "default": "",
+        "required": false,
+        "placeholder": "仅 GitHub 官方时生效，如 https://gh-proxy.com/ （留空为直连）"
+      },
+      {
+        "name": "OVERWRITE",
+        "label": "覆盖原文件",
+        "default": "否",
+        "required": true,
+        "options": [ "是", "否" ],
+        "placeholder": "已存在 python 目录时是否进行覆盖"
+      },
+      {
+        "name": "SET_PATH",
+        "label": "设置 PATH",
+        "default": "否",
+        "required": true,
+        "options": [ "是", "否" ],
+        "placeholder": "是否写入 SCRIPT_MANAGER_ENV 并加入 PATH"
+      }
+    ]
+  },
+  {
+    "name": "安装 Node.js 运行时环境",
+    "path": "./Install-Node.ps1",
+    "lang": "powershell",
+    "admin": true,
+    "params": [
+      {
+        "name": "INSTALL_DIR",
+        "label": "安装目录",
+        "default": "",
+        "required": false,
+        "type": "folder",
+        "placeholder": "默认安装至程序 runtime 目录"
+      },
+      {
+        "name": "VERSION",
+        "label": "Node 版本",
+        "default": "Node.js 22 (LTS)",
+        "required": true,
+        "options": [
+          "Node.js 24 (LTS)",
+          "Node.js 22 (LTS)",
+          "Node.js 20 (LTS)",
+          "Node.js 18 (LTS)"
+        ],
+        "placeholder": "选择要安装的 Node.js LTS 大版本"
+      },
+      {
+        "name": "OVERWRITE",
+        "label": "覆盖原文件",
+        "default": "否",
+        "required": true,
+        "options": [ "是", "否" ],
+        "placeholder": "该版本 node 目录已存在时是否进行覆盖"
+      },
+      {
+        "name": "SET_PATH",
+        "label": "设置 PATH",
+        "default": "否",
+        "required": true,
+        "options": [ "是", "否" ],
+        "placeholder": "是否写入 SCRIPT_MANAGER_ENV 并加入 PATH"
+      }
+    ]
+  },
+  {
+    "name": "安装 Go 运行时环境",
+    "path": "./Install-Go.ps1",
+    "lang": "powershell",
+    "admin": true,
+    "params": [
+      {
+        "name": "INSTALL_DIR",
+        "label": "安装目录",
+        "default": "",
+        "required": false,
+        "type": "folder",
+        "placeholder": "默认安装至程序 runtime 目录"
+      },
+      {
+        "name": "VERSION",
+        "label": "Go 版本",
+        "default": "Go 1.26",
+        "required": true,
+        "options": [
+          "Go 1.27",
+          "Go 1.26",
+          "Go 1.25",
+          "Go 1.24"
+        ],
+        "placeholder": "选择要安装的 Go 版本（官方仅维护最近两个 minor）"
+      },
+      {
+        "name": "OVERWRITE",
+        "label": "覆盖原文件",
+        "default": "否",
+        "required": true,
+        "options": [ "是", "否" ],
+        "placeholder": "该版本 go 目录已存在时是否进行覆盖"
+      },
+      {
+        "name": "SET_PATH",
+        "label": "设置 PATH",
+        "default": "否",
+        "required": true,
+        "options": [ "是", "否" ],
+        "placeholder": "是否写入 SCRIPT_MANAGER_ENV 并加入 PATH"
+      }
+    ]
+  },
+  {
+    "name": "安装 Rust 运行时环境",
+    "path": "./Install-Rust.ps1",
+    "lang": "powershell",
+    "admin": true,
+    "params": [
+      {
+        "name": "INSTALL_DIR",
+        "label": "安装目录",
+        "default": "",
+        "required": false,
+        "type": "folder",
+        "placeholder": "默认安装至程序 runtime 目录"
+      },
+      {
+        "name": "CHANNEL",
+        "label": "通道",
+        "default": "stable",
+        "required": true,
+        "options": [ "stable", "beta", "nightly" ],
+        "placeholder": "选择 Rust 发布通道"
+      },
+      {
+        "name": "OVERWRITE",
+        "label": "覆盖原文件",
+        "default": "否",
+        "required": true,
+        "options": [ "是", "否" ],
+        "placeholder": "该通道 rust 目录已存在时是否进行覆盖"
+      },
+      {
+        "name": "SET_PATH",
+        "label": "设置 PATH",
+        "default": "否",
+        "required": true,
+        "options": [ "是", "否" ],
+        "placeholder": "是否写入 SCRIPT_MANAGER_ENV 并加入 PATH"
+      }
+    ]
+  }
+]

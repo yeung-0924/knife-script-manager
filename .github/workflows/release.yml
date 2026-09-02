@@ -1,0 +1,46 @@
+name: Release
+
+on:
+  push:
+    tags:
+      - 'v*'          # 推送形如 v1.0.0 的 tag 时触发
+
+permissions:
+  contents: write    # 允许动作创建 Release 与上传附件
+
+jobs:
+  build:
+    runs-on: windows-latest
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Setup .NET 10 SDK
+        uses: actions/setup-dotnet@v4
+        with:
+          dotnet-version: '10.0.x'
+
+      - name: Build Portable (self-contained)
+        shell: pwsh
+        run: |
+          .\build.ps1 -Edition Portable
+
+      - name: Build Standard (framework-dependent)
+        shell: pwsh
+        run: |
+          .\build.ps1 -Edition Standard
+
+      - name: Package artifacts
+        shell: pwsh
+        run: |
+          $ver = $env:GITHUB_REF_NAME
+          Compress-Archive -Path "dist/ScriptManagerPortable/*" -DestinationPath "ScriptManagerPortable-$ver.zip" -Force
+          Compress-Archive -Path "dist/ScriptManager/*"       -DestinationPath "ScriptManager-$ver.zip"       -Force
+
+      - name: Create Release and upload
+        uses: softprops/action-gh-release@v2
+        with:
+          files: |
+            ScriptManagerPortable-${{ github.ref_name }}.zip
+            ScriptManager-${{ github.ref_name }}.zip
+          generate_release_notes: true

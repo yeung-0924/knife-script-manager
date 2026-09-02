@@ -1,0 +1,45 @@
+[
+  {
+    "name": "获取进程列表",
+    "path": "./Get-Precess.ps1",
+    "lang": "powershell",
+    "params": [
+      {
+        "name": "NAME",
+        "label": "进程名称",
+        "default": "",
+        "required": false,
+        "placeholder": "进程名称关键字，留空显示全部"
+      }
+    ]
+  },
+  {
+    "name": "结束进程",
+    "path": "./Kill-Process.ps1",
+    "lang": "powershell",
+    "admin": true,
+    "params": [
+      {
+        "name": "PID",
+        "label": "进程 ID",
+        "default": "",
+        "required": false,
+        "placeholder": "进程 PID"
+      },
+      {
+        "name": "PORT",
+        "label": "端口号",
+        "default": "",
+        "required": false,
+        "placeholder": "进程端口"
+      },
+      {
+        "name": "NAME",
+        "label": "进程名称",
+        "default": "",
+        "required": false,
+        "placeholder": "进程名称关键字"
+      }
+    ]
+  }
+]

@@ -1,0 +1,128 @@
+[
+  {
+    "name": "PowerShell 脚本",
+    "path": "./powershell.ps1",
+    "lang": "powershell",
+    "params": [
+      {
+        "name": "NAME",
+        "label": "问候对象",
+        "default": "World",
+        "required": false,
+        "placeholder": "如 World"
+      }
+    ]
+  },
+  {
+    "name": "PowerShell7 脚本",
+    "path": "./pwsh.ps1",
+    "lang": "pwsh",
+    "params": [
+      {
+        "name": "NAME",
+        "label": "问候对象",
+        "default": "World",
+        "required": false,
+        "placeholder": "如 World"
+      }
+    ]
+  },
+  {
+    "name": "CMD 脚本",
+    "path": "./cmd.bat",
+    "lang": "cmd",
+    "params": [
+      {
+        "name": "NAME",
+        "label": "问候对象",
+        "default": "World",
+        "required": false,
+        "placeholder": "如 World"
+      }
+    ]
+  },
+  {
+    "name": "Bash 脚本",
+    "path": "./bash.sh",
+    "lang": "bash",
+    "params": [
+      {
+        "name": "NAME",
+        "label": "问候对象",
+        "default": "World",
+        "required": false,
+        "placeholder": "如 World"
+      }
+    ]
+  },
+  {
+    "name": "Java 脚本",
+    "path": "./java.java",
+    "lang": "java",
+    "params": [
+      {
+        "name": "NAME",
+        "label": "问候对象",
+        "default": "World",
+        "required": false,
+        "placeholder": "如 World"
+      }
+    ]
+  },
+  {
+    "name": "Node 脚本",
+    "path": "./node.js",
+    "lang": "node",
+    "params": [
+      {
+        "name": "NAME",
+        "label": "Name",
+        "default": "DY",
+        "required": true,
+        "placeholder": "Name"
+      }
+    ]
+  },
+  {
+    "name": "Python 脚本",
+    "path": "./python.py",
+    "lang": "python",
+    "params": [
+      {
+        "name": "NAME",
+        "label": "问候对象",
+        "default": "World",
+        "required": false,
+        "placeholder": "如 World"
+      }
+    ]
+  },
+  {
+    "name": "Go 脚本",
+    "path": "./go_hello.go",
+    "lang": "go",
+    "params": [
+      {
+        "name": "NAME",
+        "label": "问候对象",
+        "default": "World",
+        "required": false,
+        "placeholder": "如 World"
+      }
+    ]
+  },
+  {
+    "name": "Rust 脚本",
+    "path": "./rust_hello.rs",
+    "lang": "rust",
+    "params": [
+      {
+        "name": "NAME",
+        "label": "问候对象",
+        "default": "World",
+        "required": false,
+        "placeholder": "如 World"
+      }
+    ]
+  }
+]

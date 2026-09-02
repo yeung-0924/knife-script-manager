@@ -1,0 +1,31 @@
+[
+  {
+    "name": "Windows",
+    "include": "./windows/index.json"
+  },
+  {
+    "name": "Hyper-V",
+    "include": "./hyper/index.json"
+  },
+  {
+    "name": "工具箱",
+    "include": "./toolkit/index.json"
+  },
+  {
+    "name": "运行时环境",
+    "include": "./runtime/index.json"
+  },
+  {
+    "name": "DEMO",
+    "include": "./demo/index.json"
+  },
+  {
+    "name": "测试",
+    "include": "./test/index.json"
+  },
+  {
+    "name": "README",
+    "path": "./readme.cmd",
+    "lang": "cmd"
+  }
+]

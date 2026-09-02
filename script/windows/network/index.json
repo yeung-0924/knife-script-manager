@@ -1,0 +1,74 @@
+[
+  {
+    "name": "获取网卡信息",
+    "path": "./Get-IPInfo.ps1",
+    "lang": "powershell"
+  },
+  {
+    "name": "网络连通性测试",
+    "path": "./network_connectivity_test.bat",
+    "lang": "cmd",
+    "params": [
+      {
+        "name": "HOST",
+        "label": "目标主机",
+        "default": "",
+        "required": true,
+        "placeholder": "目标主机的 IP 或域名"
+      },
+      {
+        "name": "PORT",
+        "label": "目标端口",
+        "default": "",
+        "required": false,
+        "placeholder": "目标主机的端口号"
+      }
+    ]
+  },
+  {
+    "name": "防火墙",
+    "children": [
+      {
+        "name": "更新防火墙策略",
+        "path": "./firewall/Update-Firewall.ps1",
+        "lang": "powershell",
+        "admin": true,
+        "params": [
+          {
+            "name": "DOMAIN",
+            "label": "域网络",
+            "default": "启用",
+            "required": true,
+            "options": [
+              "启用",
+              "禁用"
+            ],
+            "placeholder": "启用/禁用域网络"
+          },
+          {
+            "name": "PRIVATE",
+            "label": "专用网络",
+            "default": "启用",
+            "required": true,
+            "options": [
+              "启用",
+              "禁用"
+            ],
+            "placeholder": "启用/禁用专用网络"
+          },
+          {
+            "name": "PUBLIC",
+            "label": "公用网络",
+            "default": "启用",
+            "required": true,
+            "options": [
+              "启用",
+              "禁用"
+            ],
+            "placeholder": "启用/禁用公共网络"
+          }
+        ]
+      }
+    ]
+  }
+]

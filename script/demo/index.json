@@ -1,0 +1,6 @@
+[
+  {
+    "name": "HelloWorld",
+    "include": "./helloworld/index.json"
+  }
+]

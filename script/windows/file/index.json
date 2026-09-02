@@ -1,0 +1,52 @@
+[
+  {
+    "name": "获取文件编码",
+    "path": "./Get-FileEncoding.ps1",
+    "lang": "powershell",
+    "params": [
+      {
+        "name": "PATH",
+        "label": "文件或目录",
+        "default": "",
+        "required": true,
+        "type": "folder",
+        "placeholder": "选择目录或输入文件路径"
+      },
+      {
+        "name": "NAME",
+        "label": "文件名称",
+        "default": "",
+        "required": false,
+        "placeholder": "文件名关键字"
+      },
+      {
+        "name": "ENCODING",
+        "label": "字符编码",
+        "default": "",
+        "required": false,
+        "options": [
+          "UTF-8",
+          "ASCII / UTF-8",
+          "UTF-16 LE",
+          "UTF-16 BE",
+          "UTF-32 LE",
+          "UTF-32 BE",
+          "GBK / GB2312",
+          "其他 ANSI（非 UTF-8）"
+        ],
+        "placeholder": "选择编码则只显示该编码，留空显示全部"
+      },
+      {
+        "name": "BOM",
+        "label": "BOM",
+        "default": "",
+        "required": false,
+        "options": [
+          "有",
+          "无"
+        ],
+        "placeholder": "选择有/无 BOM，留空显示全部"
+      }
+    ]
+  }
+]

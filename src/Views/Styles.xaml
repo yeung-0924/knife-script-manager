@@ -1,0 +1,365 @@
+<ResourceDictionary xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
+                    xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+                    xmlns:system="clr-namespace:System;assembly=mscorlib"
+                    xmlns:ae="http://icsharpcode.net/sharpdevelop/avalonedit">
+
+    <!-- 全局字体 -->
+    <Style TargetType="Control">
+        <Setter Property="FontFamily" Value="Segoe UI" />
+        <Setter Property="FontSize" Value="12" />
+    </Style>
+
+    <!-- 画刷（固定浅色配色，无主题切换） -->
+    <SolidColorBrush x:Key="BrushWindowBg" Color="#FFF0F0F0" />
+    <SolidColorBrush x:Key="BrushPanelBg" Color="#FFFFFFFF" />
+    <SolidColorBrush x:Key="BrushPanelBgAlt" Color="#FFF8F8F8" />
+    <SolidColorBrush x:Key="BrushToolbarBg" Color="#FFF4F4F4" />
+    <SolidColorBrush x:Key="BrushBorder" Color="#FFD0D0D0" />
+    <SolidColorBrush x:Key="BrushBorderHover" Color="#FFA0A0A0" />
+    <SolidColorBrush x:Key="BrushText" Color="#FF202020" />
+    <SolidColorBrush x:Key="BrushTextSecondary" Color="#FF555555" />
+    <SolidColorBrush x:Key="BrushTextMuted" Color="#FFA0A0A0" />
+    <SolidColorBrush x:Key="BrushTitle" Color="#FF333333" />
+    <SolidColorBrush x:Key="BrushPrimary" Color="#FF2D7DD2" />
+    <SolidColorBrush x:Key="BrushPrimaryHover" Color="#FF1C6BB8" />
+    <SolidColorBrush x:Key="BrushPrimarySoft" Color="#FFCCE3F5" />
+    <SolidColorBrush x:Key="BrushPrimarySoftHover" Color="#FFE8F1FB" />
+    <SolidColorBrush x:Key="BrushCaret" Color="#FF2D7DD2" />
+    <SolidColorBrush x:Key="BrushSelection" Color="#FFCCE3F5" />
+    <SolidColorBrush x:Key="BrushAccent" Color="#FFF0A020" />
+    <SolidColorBrush x:Key="BrushAccentHover" Color="#FFD98C12" />
+    <SolidColorBrush x:Key="BrushAccentDisabled" Color="#FFD8C8A0" />
+    <SolidColorBrush x:Key="BrushDisabledBg" Color="#FFF5F5F5" />
+    <SolidColorBrush x:Key="BrushDisabledFg" Color="#FFB0B0B0" />
+    <SolidColorBrush x:Key="BrushArrow" Color="#FF808080" />
+    <SolidColorBrush x:Key="BrushEditorBg" Color="#FFF8F8F8" />
+    <SolidColorBrush x:Key="BrushEditorFg" Color="#FF202020" />
+    <!-- 日志面板：仿 cmd 控制台 黑底白字 -->
+    <SolidColorBrush x:Key="BrushLogBg" Color="#FF0C0C0C" />
+    <SolidColorBrush x:Key="BrushLogSelection" Color="#FF264F78" />
+    <SolidColorBrush x:Key="BrushLogLineNo" Color="#FF6A6A6A" />
+    <SolidColorBrush x:Key="BrushLogSystem" Color="#FFB0B0B0" />
+    <SolidColorBrush x:Key="BrushLogOutput" Color="#FFF0F0F0" />
+    <SolidColorBrush x:Key="BrushLogError" Color="#FFFF5454" />
+    <SolidColorBrush x:Key="BrushLogExit" Color="#FF3BC9D6" />
+    <SolidColorBrush x:Key="BrushRun" Color="#FF27AE60" />
+    <SolidColorBrush x:Key="BrushRunHover" Color="#FF1E8E50" />
+    <SolidColorBrush x:Key="BrushRequired" Color="#FFE5484D" />
+    <SolidColorBrush x:Key="BrushSplitter" Color="#FFF0F0F0" />
+    <SolidColorBrush x:Key="BrushPlaceholder" Color="#FFA0A0A0" />
+
+    <!-- 按钮基础样式（24px、圆角、悬浮/禁用态） -->
+    <Style x:Key="BaseButton" TargetType="Button">
+        <Setter Property="Height" Value="24" />
+        <Setter Property="MinWidth" Value="24" />
+        <Setter Property="Padding" Value="14,0" />
+        <Setter Property="Margin" Value="0,0,8,0" />
+        <Setter Property="Background" Value="{DynamicResource BrushPrimary}" />
+        <Setter Property="Foreground" Value="White" />
+        <Setter Property="FontSize" Value="12" />
+        <Setter Property="BorderThickness" Value="0" />
+        <Setter Property="Cursor" Value="Hand" />
+        <Setter Property="VerticalContentAlignment" Value="Center" />
+        <Setter Property="HorizontalContentAlignment" Value="Center" />
+        <Setter Property="SnapsToDevicePixels" Value="True" />
+        <Setter Property="Template">
+            <Setter.Value>
+                <ControlTemplate TargetType="Button">
+                    <Border Background="{TemplateBinding Background}"
+                            CornerRadius="4" Padding="{TemplateBinding Padding}">
+                        <ContentPresenter HorizontalAlignment="Center" VerticalAlignment="Center" />
+                    </Border>
+                    <ControlTemplate.Triggers>
+                        <Trigger Property="IsMouseOver" Value="True">
+                            <Setter Property="Background" Value="{DynamicResource BrushPrimaryHover}" />
+                        </Trigger>
+                        <Trigger Property="IsEnabled" Value="False">
+                            <Setter Property="Background" Value="{DynamicResource BrushDisabledFg}" />
+                            <Setter Property="Cursor" Value="Arrow" />
+                        </Trigger>
+                    </ControlTemplate.Triggers>
+                </ControlTemplate>
+            </Setter.Value>
+        </Setter>
+    </Style>
+
+    <!-- 执行/停止按钮专用：与 BaseButton 外观一致，但悬浮态【不改变背景色】，改为在按钮外缘叠加一层
+         与当前背景同色的发光光晕（边框发亮）。
+         背景色由调用方指定（执行=BrushRun 绿 / 停止=#d81e06 红），光晕 Color 绑定 Background.Color
+         自动跟随，故两种状态共用同一样式即可各自发出对应颜色的光。
+         注意：BaseButton 的模板在 IsMouseOver 时把背景改为 BrushPrimaryHover（蓝），会覆盖调用方设置的
+         背景色——这正是"悬停变蓝"的原因；本样式重写模板去掉该行为。 -->
+    <Style x:Key="BaseButtonGlow" TargetType="Button" BasedOn="{StaticResource BaseButton}">
+        <Setter Property="Template">
+            <Setter.Value>
+                <ControlTemplate TargetType="Button">
+                    <Grid>
+                        <!-- 发光层：与按钮等大的实心圆角块，仅用于在其外围产生光晕。
+                             必须单独分层——若把 Effect 直接挂在承载文字的 Border 上，文字会一并被模糊。
+                             ShadowDepth=0 让光晕均匀环绕而非偏向某一侧。
+                             默认 Opacity=0 隐藏；由于本层被下方内容层完全遮挡，只有外围模糊部分可见，
+                             因此调整本层 Opacity 即等价于调整光晕强度。
+                             ⚠️ 光晕强度只能改本元素的 Opacity，不要用 Setter TargetName 指向 Effect：
+                             DropShadowEffect 是 Freezable，不注册进模板 NameScope，会编译报错 MC4111。 -->
+                        <Border x:Name="GlowLayer"
+                                Background="{TemplateBinding Background}"
+                                CornerRadius="4"
+                                Opacity="0">
+                            <Border.Effect>
+                                <DropShadowEffect Color="{Binding RelativeSource={RelativeSource TemplatedParent}, Path=Background.Color, FallbackValue=#FF27AE60}"
+                                                  BlurRadius="12"
+                                                  ShadowDepth="0" />
+                            </Border.Effect>
+                        </Border>
+                        <!-- 内容层：背景 + 文字，不套 Effect，保证文字清晰 -->
+                        <Border Background="{TemplateBinding Background}"
+                                CornerRadius="4"
+                                Padding="{TemplateBinding Padding}"
+                                SnapsToDevicePixels="True">
+                            <ContentPresenter HorizontalAlignment="Center" VerticalAlignment="Center" />
+                        </Border>
+                    </Grid>
+                    <ControlTemplate.Triggers>
+                        <!-- 悬浮：背景色保持原样，仅点亮外缘光晕（保持原有绿/红，不变蓝） -->
+                        <Trigger Property="IsMouseOver" Value="True">
+                            <Setter TargetName="GlowLayer" Property="Opacity" Value="0.9" />
+                        </Trigger>
+                        <!-- 按下：光晕略收，形成"按下去"的反馈 -->
+                        <Trigger Property="IsPressed" Value="True">
+                            <Setter TargetName="GlowLayer" Property="Opacity" Value="0.65" />
+                        </Trigger>
+                        <Trigger Property="IsEnabled" Value="False">
+                            <Setter Property="Background" Value="{DynamicResource BrushDisabledFg}" />
+                            <Setter Property="Cursor" Value="Arrow" />
+                            <Setter TargetName="GlowLayer" Property="Opacity" Value="0" />
+                        </Trigger>
+                    </ControlTemplate.Triggers>
+                </ControlTemplate>
+            </Setter.Value>
+        </Setter>
+    </Style>
+
+    <!-- 只读代码查看器（脚本预览 / 执行日志）：内容不可编辑，保留鼠标拖选 + 复制（Ctrl+C）能力。
+         光标的隐藏在 MainWindow.xaml.cs 中完成（CaretBrush 位于 TextArea.Caret 下，XAML 的 Class.Property
+         语法只能解析依赖属性宿主，无法解析到三级路径，故只能在代码中设置）。
+         选中高亮沿用 AvalonEdit 默认样式——SelectionBrush 属 TextArea 而非 TextEditor，无法在此用 Setter 设置。 -->
+    <Style x:Key="ReadOnlyCodeViewer" TargetType="ae:TextEditor">
+        <Setter Property="IsReadOnly" Value="True" />
+        <Setter Property="ShowLineNumbers" Value="True" />
+    </Style>
+
+    <!-- 输入框内嵌「清空」按钮：靠右、透明底、鼠标悬停显示浅灰圆底 -->
+    <Style x:Key="ClearButton" TargetType="Button">
+        <Setter Property="Width" Value="14" />
+        <Setter Property="Height" Value="14" />
+        <Setter Property="HorizontalAlignment" Value="Right" />
+        <Setter Property="VerticalAlignment" Value="Center" />
+        <Setter Property="Margin" Value="0,0,4,0" />
+        <Setter Property="Padding" Value="0" />
+        <Setter Property="Background" Value="Transparent" />
+        <Setter Property="BorderThickness" Value="0" />
+        <Setter Property="Cursor" Value="Hand" />
+        <Setter Property="Focusable" Value="False" />
+        <Setter Property="Content" Value="✕" />
+        <Setter Property="FontSize" Value="9" />
+        <Setter Property="Foreground" Value="{DynamicResource BrushPlaceholder}" />
+        <Setter Property="Template">
+            <Setter.Value>
+                <ControlTemplate TargetType="Button">
+                    <Border x:Name="Bd" Background="{TemplateBinding Background}"
+                            CornerRadius="7" SnapsToDevicePixels="True">
+                        <ContentPresenter HorizontalAlignment="Center" VerticalAlignment="Center" />
+                    </Border>
+                    <ControlTemplate.Triggers>
+                        <Trigger Property="IsMouseOver" Value="True">
+                            <Setter TargetName="Bd" Property="Background" Value="#FFE0E0E0" />
+                            <Setter Property="Foreground" Value="{DynamicResource BrushTitle}" />
+                        </Trigger>
+                        <Trigger Property="IsPressed" Value="True">
+                            <Setter TargetName="Bd" Property="Background" Value="#FFC8C8C8" />
+                        </Trigger>
+                    </ControlTemplate.Triggers>
+                </ControlTemplate>
+            </Setter.Value>
+        </Setter>
+    </Style>
+
+    <!-- 输入框基础样式（24px、圆角、聚焦高亮、悬浮边框） -->
+    <Style x:Key="BaseTextBox" TargetType="TextBox">
+        <Setter Property="Height" Value="24" />
+        <Setter Property="MinHeight" Value="24" />
+        <Setter Property="VerticalContentAlignment" Value="Center" />
+        <Setter Property="Padding" Value="2,0" />
+        <Setter Property="FontSize" Value="12" />
+        <Setter Property="Background" Value="{DynamicResource BrushPanelBg}" />
+        <Setter Property="Foreground" Value="{DynamicResource BrushText}" />
+        <Setter Property="BorderBrush" Value="{DynamicResource BrushBorder}" />
+        <Setter Property="BorderThickness" Value="1" />
+        <Setter Property="CaretBrush" Value="{DynamicResource BrushCaret}" />
+        <Setter Property="SelectionBrush" Value="{DynamicResource BrushSelection}" />
+        <Setter Property="SnapsToDevicePixels" Value="True" />
+        <Setter Property="Template">
+            <Setter.Value>
+                <ControlTemplate TargetType="TextBox">
+                    <Border x:Name="Bd"
+                            Background="{TemplateBinding Background}"
+                            BorderBrush="{TemplateBinding BorderBrush}"
+                            BorderThickness="{TemplateBinding BorderThickness}"
+                            CornerRadius="4"
+                            SnapsToDevicePixels="True">
+                        <ScrollViewer x:Name="PART_ContentHost"
+                                      Margin="{TemplateBinding Padding}"
+                                      VerticalAlignment="Center"
+                                      Focusable="False" />
+                    </Border>
+                    <ControlTemplate.Triggers>
+                        <Trigger Property="IsMouseOver" Value="True">
+                            <Setter TargetName="Bd" Property="BorderBrush" Value="{DynamicResource BrushBorderHover}" />
+                        </Trigger>
+                        <Trigger Property="IsKeyboardFocusWithin" Value="True">
+                            <Setter TargetName="Bd" Property="BorderBrush" Value="{DynamicResource BrushPrimary}" />
+                            <Setter TargetName="Bd" Property="BorderThickness" Value="1.5" />
+                        </Trigger>
+                        <Trigger Property="IsEnabled" Value="False">
+                            <Setter TargetName="Bd" Property="Background" Value="{DynamicResource BrushDisabledBg}" />
+                            <Setter Property="Foreground" Value="{DynamicResource BrushDisabledFg}" />
+                        </Trigger>
+                    </ControlTemplate.Triggers>
+                </ControlTemplate>
+            </Setter.Value>
+        </Setter>
+    </Style>
+
+    <!-- 黄色按钮（如重置参数）；其余与 BaseButton 一致，仅配色不同 -->
+    <Style x:Key="BaseButtonYellow" TargetType="Button" BasedOn="{StaticResource BaseButton}">
+        <Setter Property="Background" Value="{DynamicResource BrushAccent}" />
+        <Setter Property="Template">
+            <Setter.Value>
+                <ControlTemplate TargetType="Button">
+                    <Border Background="{TemplateBinding Background}"
+                            CornerRadius="4" Padding="{TemplateBinding Padding}">
+                        <ContentPresenter HorizontalAlignment="Center" VerticalAlignment="Center" />
+                    </Border>
+                    <ControlTemplate.Triggers>
+                        <Trigger Property="IsMouseOver" Value="True">
+                            <Setter Property="Background" Value="{DynamicResource BrushAccentHover}" />
+                        </Trigger>
+                        <Trigger Property="IsEnabled" Value="False">
+                            <Setter Property="Background" Value="{DynamicResource BrushAccentDisabled}" />
+                            <Setter Property="Cursor" Value="Arrow" />
+                        </Trigger>
+                    </ControlTemplate.Triggers>
+                </ControlTemplate>
+            </Setter.Value>
+        </Setter>
+    </Style>
+
+    <!-- 白底黑字按钮（如导出/复制/重置） -->
+    <Style x:Key="BaseButtonLight" TargetType="Button" BasedOn="{StaticResource BaseButton}">
+        <Setter Property="Background" Value="#FFFFFF" />
+        <Setter Property="Foreground" Value="{DynamicResource BrushTitle}" />
+        <Setter Property="BorderBrush" Value="{DynamicResource BrushBorder}" />
+        <Setter Property="BorderThickness" Value="1" />
+        <Setter Property="Template">
+            <Setter.Value>
+                <ControlTemplate TargetType="Button">
+                    <Border Background="{TemplateBinding Background}"
+                            BorderBrush="{TemplateBinding BorderBrush}"
+                            BorderThickness="{TemplateBinding BorderThickness}"
+                            CornerRadius="4" Padding="{TemplateBinding Padding}">
+                        <ContentPresenter HorizontalAlignment="Center" VerticalAlignment="Center" />
+                    </Border>
+                    <ControlTemplate.Triggers>
+                        <Trigger Property="IsMouseOver" Value="True">
+                            <Setter Property="Background" Value="#F0F0F0" />
+                        </Trigger>
+                        <Trigger Property="IsEnabled" Value="False">
+                            <Setter Property="Background" Value="#ECECEC" />
+                            <Setter Property="Foreground" Value="{DynamicResource BrushDisabledFg}" />
+                            <Setter Property="Cursor" Value="Arrow" />
+                        </Trigger>
+                    </ControlTemplate.Triggers>
+                </ControlTemplate>
+            </Setter.Value>
+        </Setter>
+    </Style>
+
+    <!-- 输入框后缀按钮：与左侧输入框拼接成一体（左边直角、右边圆角，避免拼缝处出现圆角缺口）。
+         用于「自动检测」「浏览」等紧贴输入框右侧的图标按钮。 -->
+    <Style x:Key="BaseButtonLightSuffix" TargetType="Button" BasedOn="{StaticResource BaseButtonLight}">
+        <Setter Property="BorderThickness" Value="1,1,1,1" />
+        <Setter Property="Template">
+            <Setter.Value>
+                <ControlTemplate TargetType="Button">
+                    <Border Background="{TemplateBinding Background}"
+                            BorderBrush="{TemplateBinding BorderBrush}"
+                            BorderThickness="{TemplateBinding BorderThickness}"
+                            CornerRadius="0,4,4,0"
+                            Padding="{TemplateBinding Padding}">
+                        <ContentPresenter HorizontalAlignment="Center" VerticalAlignment="Center" />
+                    </Border>
+                    <ControlTemplate.Triggers>
+                        <Trigger Property="IsMouseOver" Value="True">
+                            <Setter Property="Background" Value="#F0F0F0" />
+                        </Trigger>
+                        <Trigger Property="IsEnabled" Value="False">
+                            <Setter Property="Background" Value="#ECECEC" />
+                            <Setter Property="Foreground" Value="{DynamicResource BrushDisabledFg}" />
+                            <Setter Property="Cursor" Value="Arrow" />
+                        </Trigger>
+                    </ControlTemplate.Triggers>
+                </ControlTemplate>
+            </Setter.Value>
+        </Setter>
+    </Style>
+
+    <!-- 标题文字 -->
+    <Style x:Key="TitleText" TargetType="TextBlock">
+        <Setter Property="FontSize" Value="14" />
+        <Setter Property="FontWeight" Value="Bold" />
+        <Setter Property="Foreground" Value="{DynamicResource BrushTitle}" />
+    </Style>
+
+    <!-- 分组框：无边框，只保留背景，由内部子元素自行控制间距 -->
+    <Style x:Key="PanelBorder" TargetType="Border">
+        <Setter Property="BorderThickness" Value="0" />
+        <Setter Property="CornerRadius" Value="4" />
+        <Setter Property="Background" Value="{DynamicResource BrushPanelBg}" />
+        <Setter Property="Padding" Value="0" />
+    </Style>
+
+    <!-- 选项齿轮菜单：圆角面板 + 轻微下移，视觉上悬于齿轮按钮下方。 -->
+    <Style x:Key="OptionsContextMenu" TargetType="ContextMenu">
+        <Setter Property="SnapsToDevicePixels" Value="True" />
+        <Setter Property="Template">
+            <Setter.Value>
+                <ControlTemplate TargetType="ContextMenu">
+                    <Border Background="{DynamicResource BrushPanelBg}"
+                            BorderBrush="{DynamicResource BrushBorder}"
+                            BorderThickness="1"
+                            CornerRadius="4"
+                            Padding="2"
+                            Margin="0,4,0,0"
+                            SnapsToDevicePixels="True">
+                        <ItemsPresenter SnapsToDevicePixels="True" />
+                    </Border>
+                </ControlTemplate>
+            </Setter.Value>
+        </Setter>
+    </Style>
+
+    <!-- 面板标题栏（脚本列表 / 脚本参数 / 脚本预览 / 执行日志 顶部行，以及顶部执行操作条）：
+         通栏贴边（无外边距、方角），浅灰底 + 1px 边框，让"标题 + 按钮"这一行视觉上成为一体，与下方内容区分。
+         方角：标题栏通栏后四角均为方角，与外层面板边缘齐平，避免圆角错位露白边。 -->
+    <Style x:Key="PanelHeader" TargetType="Border">
+        <Setter Property="Height" Value="36" />
+        <Setter Property="Margin" Value="0" />
+        <Setter Property="Padding" Value="10,0" />
+        <Setter Property="CornerRadius" Value="0" />
+        <Setter Property="Background" Value="{DynamicResource BrushToolbarBg}" />
+        <Setter Property="BorderBrush" Value="{DynamicResource BrushBorder}" />
+        <Setter Property="BorderThickness" Value="1" />
+        <Setter Property="SnapsToDevicePixels" Value="True" />
+    </Style>
+
+</ResourceDictionary>

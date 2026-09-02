@@ -1,0 +1,87 @@
+[
+  {
+    "name": "Java 外部依赖测试",
+    "path": "./JavaExternalDep.java",
+    "lang": "java",
+    "params": [
+      {
+        "name": "NAME",
+        "label": "姓名",
+        "default": "小名",
+        "required": false,
+        "placeholder": "如 World"
+      }
+    ]
+  },
+  {
+    "name": "Node 外部依赖测试",
+    "path": "./NodeExternalDep.js",
+    "lang": "node",
+    "params": [
+      {
+        "name": "NAME",
+        "label": "Name",
+        "default": "DY",
+        "required": false,
+        "placeholder": "Name"
+      }
+    ]
+  },
+  {
+    "name": "Python",
+    "children": [
+      {
+        "name": "Python 外部依赖测试",
+        "path": "./PythonExternalDep.py",
+        "lang": "python",
+        "params": [
+          {
+            "name": "NAME",
+            "label": "问候对象",
+            "default": "World",
+            "required": false,
+            "placeholder": "如 World"
+          }
+        ]
+      }
+    ]
+  },
+  {
+    "name": "编码测试",
+    "path": "./Test-Encoding.ps1",
+    "lang": "powershell"
+  },
+  {
+    "name": "10 秒测试",
+    "path": "./Test-Timeout.ps1",
+    "lang": "powershell"
+  },
+  {
+    "name": "Go 语言测试",
+    "path": "./go_hello.go",
+    "lang": "go",
+    "params": [
+      {
+        "name": "NAME",
+        "label": "问候对象",
+        "default": "World",
+        "required": false,
+        "placeholder": "如 World"
+      }
+    ]
+  },
+  {
+    "name": "Rust 语言测试",
+    "path": "./rust_hello.rs",
+    "lang": "rust",
+    "params": [
+      {
+        "name": "NAME",
+        "label": "问候对象",
+        "default": "World",
+        "required": false,
+        "placeholder": "如 World"
+      }
+    ]
+  }
+]

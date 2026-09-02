@@ -1,0 +1,50 @@
+<UserControl x:Class="ScriptManager.Views.DropDownBox"
+             xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
+             xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+             xmlns:local="clr-namespace:ScriptManager.Views"
+             Height="24">
+    <Grid>
+        <TextBox x:Name="Input"
+                 Text="{Binding Text, RelativeSource={RelativeSource AncestorType=UserControl}, Mode=TwoWay, UpdateSourceTrigger=PropertyChanged}"
+                 IsReadOnly="True"
+                 Cursor="Hand"
+                 PreviewMouseDown="Input_PreviewMouseDown"
+                 LostFocus="Input_LostFocus"
+                 Padding="2,0,18,0">  <!-- 右侧留空：给外部叠加的「清空」按钮让位，避免文字被遮挡 -->
+            <!-- IsInvalid（如必填未填写）为 true 时标红。
+                 注意：不能靠对外层 UserControl 设 BorderBrush——本控件外观由内部 TextBox 呈现，UserControl 无模板绑定传递该属性。 -->
+            <TextBox.Style>
+                <Style TargetType="TextBox" BasedOn="{StaticResource BaseTextBox}">
+                    <Style.Triggers>
+                        <DataTrigger Binding="{Binding IsInvalid, RelativeSource={RelativeSource AncestorType=UserControl}}" Value="True">
+                            <Setter Property="BorderBrush" Value="Red" />
+                            <Setter Property="BorderThickness" Value="1.5" />
+                        </DataTrigger>
+                    </Style.Triggers>
+                </Style>
+            </TextBox.Style>
+        </TextBox>
+        <Popup x:Name="Popup"
+               Placement="Bottom"
+               StaysOpen="True"
+               AllowsTransparency="True"
+               PopupAnimation="Slide"
+               Margin="0,2,0,0">
+            <Border Background="{DynamicResource BrushPanelBg}"
+                    BorderBrush="{DynamicResource BrushBorder}"
+                    BorderThickness="1"
+                    CornerRadius="4"
+                    MaxHeight="220"
+                    MinWidth="{Binding ActualWidth, RelativeSource={RelativeSource AncestorType=UserControl}}"
+                    SnapsToDevicePixels="True">
+                <ListBox x:Name="List"
+                         ItemsSource="{Binding ItemsSource, RelativeSource={RelativeSource AncestorType=UserControl}}"
+                         BorderThickness="0"
+                         Background="Transparent"
+                         SelectionChanged="List_SelectionChanged"
+                         ScrollViewer.VerticalScrollBarVisibility="Auto"
+                         ScrollViewer.CanContentScroll="False" />
+            </Border>
+        </Popup>
+    </Grid>
+</UserControl>

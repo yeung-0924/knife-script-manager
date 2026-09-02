@@ -1,0 +1,38 @@
+[
+  {
+    "name": "设置固定 IP（宿主机）",
+    "path": "./Set-StaticIP.ps1",
+    "lang": "powershell",
+    "admin": true,
+    "params": [
+      {
+        "name": "SWITCH_NAME",
+        "label": "虚拟交换机名称",
+        "default": "",
+        "required": true,
+        "placeholder": "新虚拟交换机"
+      },
+      {
+        "name": "GATEWAY_IP",
+        "label": "宿主机网关 IP",
+        "default": "",
+        "required": true,
+        "placeholder": "192.168.1.1"
+      },
+      {
+        "name": "SUBNET_PREFIX",
+        "label": "子网掩码位数",
+        "default": "",
+        "required": true,
+        "placeholder": "24"
+      },
+      {
+        "name": "NAT_NETWORK",
+        "label": "NAT 子网范围",
+        "default": "",
+        "required": true,
+        "placeholder": "192.168.1.0/24"
+      }
+    ]
+  }
+]

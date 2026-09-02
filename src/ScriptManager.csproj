@@ -1,0 +1,47 @@
+﻿<Project Sdk="Microsoft.NET.Sdk">
+
+  <PropertyGroup>
+    <OutputType>WinExe</OutputType>
+    <TargetFramework>net10.0-windows</TargetFramework>
+    <RuntimeIdentifiers>win-x64;win-arm64</RuntimeIdentifiers>
+    <Nullable>enable</Nullable>
+    <UseWPF>true</UseWPF>
+    <ImplicitUsings>enable</ImplicitUsings>
+    <AssemblyName>ScriptManager</AssemblyName>
+    <ApplicationIcon>..\assets\images\app.ico</ApplicationIcon>
+  </PropertyGroup>
+
+  <!-- 目录树图标：按 lang 切换（powershell/cmd/python/java/bash/node/go/rust），分组节点用 folder。
+       语言图标存放于 assets/images/lang/，分组/应用图标存放于 assets/images/ -->
+  <ItemGroup>
+    <EmbeddedResource Include="..\assets\images\folder.ico" LogicalName="icons.folder.ico" />
+    <EmbeddedResource Include="..\assets\images\lang\powershell.ico" LogicalName="icons.powershell.ico" />
+    <EmbeddedResource Include="..\assets\images\lang\cmd.ico" LogicalName="icons.cmd.ico" />
+    <EmbeddedResource Include="..\assets\images\lang\python.ico" LogicalName="icons.python.ico" />
+    <EmbeddedResource Include="..\assets\images\lang\java.ico" LogicalName="icons.java.ico" />
+    <EmbeddedResource Include="..\assets\images\lang\bash.ico" LogicalName="icons.bash.ico" />
+    <EmbeddedResource Include="..\assets\images\lang\node.ico" LogicalName="icons.node.ico" />
+    <EmbeddedResource Include="..\assets\images\lang\go.ico" LogicalName="icons.go.ico" />
+    <EmbeddedResource Include="..\assets\images\lang\rust.ico" LogicalName="icons.rust.ico" />
+    <EmbeddedResource Include="..\assets\images\lang\pwsh.ico" LogicalName="icons.pwsh.ico" />
+  </ItemGroup>
+
+  <ItemGroup>
+    <Resource Include="..\assets\images\*.ico" />
+    <!-- Lucide SVG 按钮图标：存放于 assets/images/button/，打包为程序集 Resource，
+         运行期用 pack://application:,,,/assets/images/button/xxx.svg 加载。
+         Link 强制资源在程序集中的逻辑路径为 assets/images/button/xxx.svg，
+         使 pack URI 与资源名精确匹配（否则 ..\ 前缀会导致 GetResourceStream 返回 null）。 -->
+    <Resource Include="..\assets\images\button\*.svg" Link="assets\images\button\%(Filename)%(Extension)" />
+  </ItemGroup>
+
+  <!-- 语法高亮编辑器：替换只读脚本预览框，内置 PowerShell 高亮 -->
+  <ItemGroup>
+    <PackageReference Include="AvalonEdit" Version="6.3.1.120" />
+    <PackageReference Include="SharpVectors.Reloaded" Version="1.8.4.2" />
+    <!-- GBK/GB2312 等代码页：.NET 10 运行时已内置 CodePages，无需显式引用
+         （脚本统一 UTF-8 无 BOM，EncodingHelper 仅做 BOM 探测，不注册额外编码提供程序；
+         移除 8.0.0 包以消除 NU1510 警告） -->
+  </ItemGroup>
+
+</Project>

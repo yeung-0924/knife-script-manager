@@ -1,0 +1,659 @@
+<Window x:Class="ScriptManager.Views.MainWindow"
+        x:Name="RootWindow"
+        xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
+        xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+        xmlns:vm="clr-namespace:ScriptManager.ViewModels"
+        xmlns:local="clr-namespace:ScriptManager"
+        xmlns:views="clr-namespace:ScriptManager.Views"
+        xmlns:ae="http://icsharpcode.net/sharpdevelop/avalonedit"
+        xmlns:svgc="http://sharpvectors.codeplex.com/svgc/"
+        Title="{x:Static local:Strings.TitleWindow}" Height="720" Width="1280"
+        MinWidth="1280" MinHeight="720"
+        WindowStartupLocation="CenterScreen">
+
+    <Window.Resources>
+        <!-- 树节点模板：图标 + 名称 -->
+        <HierarchicalDataTemplate DataType="{x:Type vm:ScriptTreeItem}"
+                                  ItemsSource="{Binding Children}">
+            <Grid Margin="2">
+                <StackPanel Orientation="Horizontal">
+                    <Image Source="{Binding Icon}" Width="16" Height="16" Margin="0,0,4,0"
+                           Visibility="{Binding Icon, Converter={x:Static local:NullToVisibilityConverter.Instance}}" />
+                    <TextBlock Text="{Binding Name}" VerticalAlignment="Center" />
+                </StackPanel>
+            </Grid>
+        </HierarchicalDataTemplate>
+    </Window.Resources>
+
+    <DockPanel>
+        <!-- 底部状态栏 -->
+        <StatusBar DockPanel.Dock="Bottom">
+            <StatusBarItem VerticalAlignment="Center">
+                <!-- 两个 TextBlock 字体不同（左侧默认字体 / 右侧 Consolas 等宽），行高与基线天生不同。
+                     故容器与两个文本块一律设 VerticalAlignment="Center"，并显式统一 FontSize=12，
+                     否则耗时数字会与左侧文字上下错位。 -->
+                <StackPanel Orientation="Horizontal" VerticalAlignment="Center">
+                    <TextBlock Margin="10,0,0,0"
+                               VerticalAlignment="Center"
+                               FontSize="12">
+                        <TextBlock.Style>
+                            <Style TargetType="TextBlock">
+                                <!-- 默认显示 StatusText；校验中被「可执行文件检测中」覆盖 -->
+                                <Setter Property="Text" Value="{Binding StatusText}" />
+                                <Style.Triggers>
+                                    <DataTrigger Binding="{Binding IsRuntimeChecking}" Value="True">
+                                        <Setter Property="Text" Value="{x:Static local:Strings.StatusRuntimeChecking}" />
+                                    </DataTrigger>
+                                </Style.Triggers>
+                            </Style>
+                        </TextBlock.Style>
+                    </TextBlock>
+                    <!-- 执行耗时：执行中显示「已用时 mm:ss.fff」（VM 定时器 ~60fps 刷新），
+                         结束后定格为「总用时 mm:ss.fff」，位置与样式均不变，直到切换脚本或下次执行。
+                         Visibility 绑 HasElapsed（文本非空）而非 IsRunning，否则结束后就消失了。
+                         用等宽字体，避免数字宽度变化导致文本左右抖动。 -->
+                    <TextBlock Text="{Binding ElapsedText}"
+                               Margin="12,0,0,0"
+                               VerticalAlignment="Center"
+                               FontSize="12"
+                               FontFamily="Consolas"
+                               Visibility="{Binding HasElapsed, Converter={x:Static local:BooleanToVisibilityConverter.Instance}}" />
+                </StackPanel>
+            </StatusBarItem>
+            <StatusBarItem HorizontalAlignment="Right">
+                <TextBlock Text="{Binding VersionText}" Foreground="{DynamicResource {x:Static SystemColors.GrayTextBrushKey}}" Margin="0,0,10,0" />
+            </StatusBarItem>
+        </StatusBar>
+
+        <!-- 主体：左树 + 右区域 -->
+        <Grid>
+            <Grid.ColumnDefinitions>
+                <ColumnDefinition Width="*" MinWidth="320" />
+                <ColumnDefinition Width="3" />
+                <ColumnDefinition Width="3*" />
+            </Grid.ColumnDefinitions>
+
+            <!-- 左：脚本树 -->
+            <Border Grid.Column="0" Style="{StaticResource PanelBorder}" Margin="0">
+                <DockPanel LastChildFill="True">
+                    <Border DockPanel.Dock="Top" Style="{StaticResource PanelHeader}"
+                            BorderThickness="1,1,0,1">
+                        <DockPanel LastChildFill="True">
+                            <Button DockPanel.Dock="Right"
+                                    Command="{Binding ToggleExpandAllCommand}"
+                                    IsEnabled="{Binding IsRunning, Converter={x:Static local:InverseBoolConverter.Instance}}"
+                                    Width="24" Height="24"
+                                    Margin="0,0,0,0"
+                                    Padding="0"
+                                    HorizontalAlignment="Right" VerticalAlignment="Center">
+                                <Button.Style>
+                                    <Style TargetType="Button" BasedOn="{StaticResource BaseButtonLight}">
+                                        <Setter Property="ToolTip" Value="{x:Static local:Strings.BtnExpandAll}" />
+                                        <Setter Property="Content">
+                                            <Setter.Value>
+                                                <svgc:SvgViewbox Width="13" Height="13"
+                                                                 UriSource='pack://application:,,,/assets/images/button/list-chevrons-up-down.svg'
+                                                                 HorizontalAlignment="Center" VerticalAlignment="Center" />
+                                            </Setter.Value>
+                                        </Setter>
+                                        <Style.Triggers>
+                                            <DataTrigger Binding="{Binding AllExpanded}" Value="True">
+                                                <Setter Property="ToolTip" Value="{x:Static local:Strings.BtnCollapseAll}" />
+                                                <Setter Property="Content">
+                                                    <Setter.Value>
+                                                        <svgc:SvgViewbox Width="13" Height="13"
+                                                                         UriSource='pack://application:,,,/assets/images/button/list-chevrons-down-up.svg'
+                                                                         HorizontalAlignment="Center" VerticalAlignment="Center" />
+                                                    </Setter.Value>
+                                                </Setter>
+                                            </DataTrigger>
+                                        </Style.Triggers>
+                                    </Style>
+                                </Button.Style>
+                            </Button>
+                            <Button DockPanel.Dock="Right"
+                                    Style="{StaticResource BaseButtonLight}"
+                                    Command="{Binding ReloadCommand}"
+                                    IsEnabled="{Binding IsRunning, Converter={x:Static local:InverseBoolConverter.Instance}}"
+                                    Width="24" Height="24" Padding="0"
+                                    Margin="0,0,3,0"
+                                    ToolTip="{x:Static local:Strings.BtnRefresh}"
+                                    HorizontalAlignment="Right" VerticalAlignment="Center">
+                                <svgc:SvgViewbox Width="13" Height="13"
+                                                 UriSource='pack://application:,,,/assets/images/button/refresh-ccw.svg'
+                                                 HorizontalAlignment="Center" VerticalAlignment="Center" />
+                            </Button>
+                            <Button DockPanel.Dock="Right"
+                                    Style="{StaticResource BaseButtonLight}"
+                                    Command="{Binding ExportCommand}"
+                                    IsEnabled="{Binding IsRunning, Converter={x:Static local:InverseBoolConverter.Instance}}"
+                                    Width="24" Height="24" Padding="0"
+                                    Margin="0,0,3,0"
+                                    ToolTip="{x:Static local:Strings.BtnExport}"
+                                    HorizontalAlignment="Right" VerticalAlignment="Center">
+                                <svgc:SvgViewbox Width="13" Height="13"
+                                                 UriSource='pack://application:,,,/assets/images/button/download.svg'
+                                                 HorizontalAlignment="Center" VerticalAlignment="Center" />
+                            </Button>
+                            <TextBlock Text="{x:Static local:Strings.TitleScriptList}" Style="{StaticResource TitleText}" VerticalAlignment="Center" />
+                        </DockPanel>
+                    </Border>
+                    <Border BorderBrush="{DynamicResource BrushBorder}" BorderThickness="1,0,0,1">
+                        <TreeView x:Name="ScriptTreeView"
+                                  ItemsSource="{Binding ScriptTree}"
+                                  SelectedItemChanged="TreeView_SelectedItemChanged"
+                                  BorderThickness="0"
+                                  Margin="10,0"
+                                  IsEnabled="{Binding IsRunning, Converter={x:Static local:InverseBoolConverter.Instance}}"
+                                  VirtualizingStackPanel.IsVirtualizing="False">
+                        <TreeView.ItemContainerStyle>
+                            <Style TargetType="TreeViewItem">
+                                <Setter Property="IsExpanded" Value="{Binding IsExpanded, Mode=TwoWay}" />
+                                <Setter Property="HorizontalContentAlignment" Value="Stretch" />
+                                <!-- 超长脚本名滚动对齐：TreeView 选中时默认把项的左边缘对齐到滚动条左边缘，
+                                     长项会被截掉左半。改用 RequestBringIntoView 拦截，把该项对齐到滚动条右端，
+                                     至少能看到文件名末尾以便识别选了哪一项。 -->
+                                <EventSetter Event="RequestBringIntoView" Handler="TreeViewItem_RequestBringIntoView" />
+                            </Style>
+                        </TreeView.ItemContainerStyle>
+                        </TreeView>
+                    </Border>
+                </DockPanel>
+            </Border>
+
+            <!-- 可拖动分隔条：调整目录树宽度，右侧自适应填充剩余宽度 -->
+            <GridSplitter Grid.Column="1"
+                          HorizontalAlignment="Stretch" VerticalAlignment="Stretch"
+                          ResizeBehavior="PreviousAndNext" ResizeDirection="Columns"
+                          Background="{DynamicResource BrushBorder}"
+                          Cursor="SizeWE" />
+
+            <!-- 右：上半[执行操作条+参数|脚本预览]整体框 + 下半日志，拖拽分隔条调整高度（总和 100%） -->
+            <Grid Grid.Column="2" Margin="0">
+                <Grid.RowDefinitions>
+                    <RowDefinition Height="*" MinHeight="0" />
+                    <RowDefinition Height="Auto" />
+                    <RowDefinition Height="*" MinHeight="0" />
+                </Grid.RowDefinitions>
+
+                <!-- 上半区：一个整体框，内含顶部执行操作条 + 下方左右两列（左参数固定300 / 右脚本预览占剩余） -->
+                <Border Grid.Row="0" Style="{StaticResource PanelBorder}">
+                    <Grid>
+                        <Grid.RowDefinitions>
+                            <RowDefinition Height="Auto" />
+                            <RowDefinition Height="*" />
+                        </Grid.RowDefinitions>
+                        <Grid.ColumnDefinitions>
+                            <ColumnDefinition Width="300" />
+                            <ColumnDefinition Width="*" MinWidth="0" />
+                        </Grid.ColumnDefinitions>
+
+                        <!-- 顶部执行操作条：执行按钮居左 + 只读可执行文件路径输入框居右（按语言自动校验，点击可手动选择 exe），跨满整宽。
+                             复用 PanelHeader 样式（通栏、方角、浅灰底 + 1px 边框），与四个面板标题栏视觉统一。
+                             注意：此处不能再写 Margin，否则元素上的本地值会覆盖样式里的通栏 Margin=0。 -->
+                        <Border Grid.Row="0" Grid.Column="0" Grid.ColumnSpan="2" Style="{StaticResource PanelHeader}"
+                                BorderThickness="0,1,1,1">
+                            <DockPanel LastChildFill="True" Margin="0">
+                                <Button DockPanel.Dock="Left">
+                                    <Button.Style>
+                                        <!-- 用 BaseButtonGlow 而非 BaseButton：后者悬浮时会把背景改为蓝色，
+                                             覆盖本样式设置的执行(绿)/停止(红)配色。前者悬浮只加同色外发光。 -->
+                                        <Style TargetType="Button" BasedOn="{StaticResource BaseButtonGlow}">
+                                            <Setter Property="Command" Value="{Binding RunCommand}" />
+                                            <Setter Property="Background" Value="{DynamicResource BrushRun}" />
+                                            <Setter Property="FontSize" Value="13" />
+                                            <Setter Property="Margin" Value="0,0,4,0" />
+                                            <Setter Property="ToolTip" Value="{x:Static local:Strings.BtnRun}" />
+                                            <Setter Property="Content">
+                                                <Setter.Value>
+                                                    <StackPanel Orientation="Horizontal" VerticalAlignment="Center">
+                                                        <TextBlock Text="{x:Static local:Strings.BtnRun}" VerticalAlignment="Center" />
+                                                        <Viewbox Width="13" Height="13" Margin="5,0,0,0" VerticalAlignment="Center">
+                                                            <Path Fill="{Binding RelativeSource={RelativeSource AncestorType=Button}, Path=Foreground}"
+                                                                  Data="M195.4 89.6l677.7 383c30.6 17.3 30.6 61.4 0 78.6l-677.7 383c-30.1 17-67.4-4.7-67.4-39.3L128 129C128 94.4 165.3 72.6 195.4 89.6z" />
+                                                        </Viewbox>
+                                                    </StackPanel>
+                                                </Setter.Value>
+                                            </Setter>
+                                            <Style.Triggers>
+                                                <DataTrigger Binding="{Binding IsRunning}" Value="True">
+                                                    <Setter Property="Command" Value="{Binding StopCommand}" />
+                                                    <Setter Property="Background" Value="#d81e06" />
+                                                    <Setter Property="Foreground" Value="White" />
+                                                    <Setter Property="ToolTip" Value="{x:Static local:Strings.BtnStop}" />
+                                                    <Setter Property="Content">
+                                                        <Setter.Value>
+                                                            <StackPanel Orientation="Horizontal" VerticalAlignment="Center">
+                                                                <TextBlock Text="{x:Static local:Strings.BtnStop}" VerticalAlignment="Center" />
+                                                                <Viewbox Width="13" Height="13" Margin="5,0,0,0" VerticalAlignment="Center">
+                                                                    <Path Fill="White"
+                                                                          Data="M777.8 896 244.2 896c-64.7 0-117.2-52.5-117.2-117.2L127 245.2c0-64.7 52.5-117.2 117.2-117.2l533.5 0C842.5 128 895 180.5 895 245.2l0 533.5C895 843.5 842.5 896 777.8 896z" />
+                                                                </Viewbox>
+                                                            </StackPanel>
+                                                        </Setter.Value>
+                                                    </Setter>
+                                                </DataTrigger>
+                                            </Style.Triggers>
+                                        </Style>
+                                    </Button.Style>
+                                </Button>
+                                <DockPanel DockPanel.Dock="Right" LastChildFill="True"
+                                           Visibility="{Binding HasScript, Converter={x:Static local:BooleanToVisibilityConverter.Instance}}">
+                                    <Button DockPanel.Dock="Right"
+                                            Command="{Binding AutoRuntimeCommand}"
+                                            ToolTip="{x:Static local:Strings.BtnAutoToolTip}"
+                                            Width="24" Height="24" Padding="0"
+                                            Margin="0" HorizontalAlignment="Right" VerticalAlignment="Center">
+                                        <Button.Style>
+                                            <!-- 与输入框拼接：左边直角、右边圆角（见 BaseButtonLightSuffix） -->
+                                            <Style TargetType="Button" BasedOn="{StaticResource BaseButtonLightSuffix}">
+                                                <Style.Triggers>
+                                                    <DataTrigger Binding="{Binding IsRuntimeChecking}" Value="True">
+                                                        <Setter Property="IsEnabled" Value="False" />
+                                                    </DataTrigger>
+                                                    <!-- 执行中禁用自动检测：避免运行时切换运行时环境 -->
+                                                    <DataTrigger Binding="{Binding IsRunning}" Value="True">
+                                                        <Setter Property="IsEnabled" Value="False" />
+                                                    </DataTrigger>
+                                                </Style.Triggers>
+                                            </Style>
+                                        </Button.Style>
+                                        <svgc:SvgViewbox Width="13" Height="13"
+                                                         UriSource='pack://application:,,,/assets/images/button/radar.svg'
+                                                         HorizontalAlignment="Center" VerticalAlignment="Center" />
+                                    </Button>
+                                    <Grid IsEnabled="{Binding IsRunning, Converter={x:Static local:InverseBoolConverter.Instance}}">
+                                        <!-- 外框：承载输入框外观，右边框/右边圆角去掉，与右侧按钮拼接成一体 -->
+                                        <Border BorderThickness="1,1,0,1"
+                                                CornerRadius="4,0,0,4"
+                                                SnapsToDevicePixels="True"
+                                                Height="24" VerticalAlignment="Center">
+                                            <Border.Style>
+                                                <Style TargetType="Border">
+                                                    <!-- 默认边框走 Style，Triggers 才能覆盖（直接属性优先级高于 Trigger） -->
+                                                    <Setter Property="BorderBrush" Value="{DynamicResource BrushBorder}" />
+                                                    <Setter Property="Background" Value="{DynamicResource BrushPanelBg}" />
+                                                    <Style.Triggers>
+                                                        <DataTrigger Binding="{Binding IsMouseOver, ElementName=ExePathBox}" Value="True">
+                                                            <Setter Property="BorderBrush" Value="{DynamicResource BrushBorderHover}" />
+                                                        </DataTrigger>
+                                                        <DataTrigger Binding="{Binding RuntimeError}" Value="True">
+                                                            <Setter Property="BorderBrush" Value="Red" />
+                                                        </DataTrigger>
+                                                        <!-- 校验中：输入框整体置灰，提示不可点击 -->
+                                                        <DataTrigger Binding="{Binding IsRuntimeChecking}" Value="True">
+                                                            <Setter Property="Background" Value="{DynamicResource BrushDisabledBg}" />
+                                                        </DataTrigger>
+                                                        <!-- 执行中：置灰底，避免用户误以为可点 -->
+                                                        <Trigger Property="IsEnabled" Value="False">
+                                                            <Setter Property="Background" Value="{DynamicResource BrushDisabledBg}" />
+                                                        </Trigger>
+                                                    </Style.Triggers>
+                                                </Style>
+                                            </Border.Style>
+                                            <TextBox x:Name="ExePathBox"
+                                                     Text="{Binding SelectedExePath, Mode=OneWay}"
+                                                     IsReadOnly="True" Cursor="Hand"
+                                                     ToolTip="{x:Static local:Strings.ExePathBoxToolTip}"
+                                                     PreviewMouseDown="ExePathBox_PreviewMouseDown"
+                                                     VerticalContentAlignment="Center"
+                                                     BorderThickness="0" Background="Transparent" Padding="2,0">
+                                                <TextBox.Style>
+                                                    <Style TargetType="TextBox" BasedOn="{StaticResource BaseTextBox}">
+                                                        <Setter Property="Template">
+                                                            <Setter.Value>
+                                                                <ControlTemplate TargetType="TextBox">
+                                                                    <!-- 背景透出外层 Border 的颜色：IsEnabled 禁用时显示外层 BrushDisabledBg -->
+                                                                    <ScrollViewer x:Name="PART_ContentHost"
+                                                                                  Margin="{TemplateBinding Padding}"
+                                                                                  VerticalAlignment="Center"
+                                                                                  Focusable="False"
+                                                                                  Background="Transparent" />
+                                                                </ControlTemplate>
+                                                            </Setter.Value>
+                                                        </Setter>
+                                                        <Style.Triggers>
+                                                            <DataTrigger Binding="{Binding IsRuntimeChecking}" Value="True">
+                                                                <Setter Property="IsEnabled" Value="False" />
+                                                                <Setter Property="Cursor" Value="Arrow" />
+                                                                <Setter Property="Foreground" Value="{DynamicResource BrushDisabledFg}" />
+                                                            </DataTrigger>
+                                                            <!-- 执行中：父 Grid 禁用会传给 TextBox；显式改光标与文字色为禁用风，避免看起来可点 -->
+                                                            <Trigger Property="IsEnabled" Value="False">
+                                                                <Setter Property="Cursor" Value="Arrow" />
+                                                                <Setter Property="Foreground" Value="{DynamicResource BrushDisabledFg}" />
+                                                            </Trigger>
+                                                        </Style.Triggers>
+                                                    </Style>
+                                                </TextBox.Style>
+                                            </TextBox>
+                                        </Border>
+                                        <TextBlock Text="{Binding RuntimePlaceholder}"
+                                                   IsHitTestVisible="False"
+                                                   VerticalAlignment="Center" Margin="8,0,0,0"
+                                                   Foreground="{DynamicResource BrushPlaceholder}"
+                                                   Visibility="{Binding ShowExePlaceholder, Converter={x:Static local:BooleanToVisibilityConverter.Instance}}" />
+                                    </Grid>
+                                </DockPanel>
+                            </DockPanel>
+                        </Border>
+
+                        <!-- 左：参数（有参数才显示；无参数时整块隐藏，仅脚本预览可见） -->
+                        <DockPanel Grid.Row="1" Grid.Column="0" LastChildFill="True" Margin="0"
+                                   Visibility="{Binding HasParameters, Converter={x:Static local:BooleanToVisibilityConverter.Instance}}">
+                            <Border DockPanel.Dock="Top" Style="{StaticResource PanelHeader}"
+                                    BorderThickness="0,0,1,1">
+                                <DockPanel LastChildFill="True">
+                                    <Button DockPanel.Dock="Right"
+                                            Style="{StaticResource BaseButtonLight}"
+                                            Command="{Binding ResetParamsCommand}"
+                                            IsEnabled="{Binding IsRunning, Converter={x:Static local:InverseBoolConverter.Instance}}"
+                                            Margin="0"
+                                            Content="{x:Static local:Strings.BtnReset}" />
+                                    <TextBlock Text="{x:Static local:Strings.TitleScriptParams}" Style="{StaticResource TitleText}" VerticalAlignment="Center" />
+                                </DockPanel>
+                            </Border>
+                            <Border BorderBrush="{DynamicResource BrushBorder}" BorderThickness="0,0,1,0">
+                                <!-- 左侧保留 10px 与表头标题对齐；右侧去掉，让滚动条紧贴右边框（与预览/日志编辑器一致） -->
+                                <ScrollViewer VerticalScrollBarVisibility="Auto" Margin="10,0,0,0">
+                                <!-- Padding 顶部 10：第一行参数上边距。
+                                     最后一行下边距由每个参数项自身的底部 Margin(10) 提供（DataTemplate 无法判断末项，故不在此加底部 Padding，否则会叠加成 20）。 -->
+                                <ItemsControl ItemsSource="{Binding ParamFields}" Padding="0,10,0,0"
+                                              IsEnabled="{Binding IsRunning, Converter={x:Static local:InverseBoolConverter.Instance}}">
+                                    <ItemsControl.ItemTemplate>
+                                        <DataTemplate>
+                                            <!-- 右边距 10：输入框不贴滚动条；底部 10：参数项间距（末项则作为面板下边距） -->
+                                            <StackPanel Margin="0,0,10,10">
+                                                <StackPanel Orientation="Horizontal" Margin="0,0,0,4">
+                                                    <TextBlock Text="{Binding Name}" Foreground="{DynamicResource BrushPlaceholder}" FontSize="12" />
+                                                    <TextBlock Text="*" Foreground="{DynamicResource BrushRequired}" FontSize="12" Margin="2,0,0,0"
+                                                               Visibility="{Binding Required, Converter={x:Static local:BooleanToVisibilityConverter.Instance}}" />
+                                                </StackPanel>
+                                                <Grid Visibility="{Binding HasOptions, Converter={x:Static local:BooleanToVisibilityConverter.Instance}}">
+                                                    <!-- 必填未填写时标红：通过 IsInvalid 传给内部输入框（直接对 UserControl 设 BorderBrush 无效） -->
+                                                    <views:DropDownBox Text="{Binding Value, UpdateSourceTrigger=PropertyChanged}"
+                                                                      ItemsSource="{Binding Options}"
+                                                                      IsInvalid="{Binding IsMissing}"
+                                                                      ToolTip="{Binding Placeholder}" />
+                                                    <TextBlock Text="{Binding Placeholder}"
+                                                               Foreground="{DynamicResource BrushPlaceholder}"
+                                                               Margin="6,0,0,0" VerticalAlignment="Center"
+                                                               IsHitTestVisible="False"
+                                                               Visibility="{Binding Value, Converter={x:Static local:StringEmptyToVisibilityConverter.Instance}}" />
+                                                    <!-- 清空按钮：仅在选择框有值时显示（下拉框选中后无法回到"未选"，靠它清空） -->
+                                                    <Button Style="{StaticResource ClearButton}"
+                                                            Command="{Binding ClearCommand}"
+                                                            ToolTip="{x:Static local:Strings.ClearButtonToolTip}"
+                                                            Visibility="{Binding Value, Converter={x:Static local:StringNotEmptyToVisibilityConverter.Instance}}" />
+                                                </Grid>
+                                                <!-- 文本框型参数（无 options）：分两种布局
+                                                     1) 选文件/目录（IsPath）：输入框 + 右侧「浏览…」按钮拼接成一体（与上方自动检测风格一致）
+                                                     2) 普通文本框：仅输入框（含清空按钮）
+                                                     外层 Grid 控制 HasOptions=false 时才显示，避免与上方 DropDownBox 分支重复。 -->
+                                                <Grid Visibility="{Binding HasOptions, Converter={x:Static local:InverseBoolToVisibilityConverter.Instance}}">
+                                                    <DockPanel Visibility="{Binding IsPath, Converter={x:Static local:BooleanToVisibilityConverter.Instance}}"
+                                                               LastChildFill="True">
+                                                    <!-- 右侧浏览按钮：与输入框拼接（左直角、无左圆角、无左边框，避免双线） -->
+                                                    <Button DockPanel.Dock="Right"
+                                                            Style="{StaticResource BaseButtonLightSuffix}"
+                                                            Command="{Binding BrowseCommand}"
+                                                            ToolTip="{x:Static local:Strings.BrowseButtonToolTip}"
+                                                            Width="24" Height="24" Padding="0"
+                                                            Margin="0" VerticalAlignment="Center">
+                                                        <svgc:SvgViewbox Width="13" Height="13"
+                                                                         UriSource='pack://application:,,,/assets/images/button/folder-open.svg'
+                                                                         HorizontalAlignment="Center" VerticalAlignment="Center" />
+                                                    </Button>
+                                                    <!-- 左侧输入框外观：右边框去掉、右圆角去掉，与右侧按钮拼合 -->
+                                                    <Border BorderThickness="1,1,0,1"
+                                                            CornerRadius="4,0,0,4"
+                                                            SnapsToDevicePixels="True"
+                                                            Height="24" VerticalAlignment="Center">
+                                                        <Border.Style>
+                                                            <Style TargetType="Border">
+                                                                <Setter Property="BorderBrush" Value="{DynamicResource BrushBorder}" />
+                                                                <Setter Property="Background" Value="{DynamicResource BrushPanelBg}" />
+                                                                <Style.Triggers>
+                                                                    <DataTrigger Binding="{Binding IsMissing}" Value="True">
+                                                                        <Setter Property="BorderBrush" Value="Red" />
+                                                                        <Setter Property="BorderThickness" Value="1.5,1.5,0,1.5" />
+                                                                    </DataTrigger>
+                                                                </Style.Triggers>
+                                                            </Style>
+                                                        </Border.Style>
+                                                        <Grid>
+                                                            <TextBox Text="{Binding Value, UpdateSourceTrigger=PropertyChanged}"
+                                                                     ToolTip="{Binding Placeholder}"
+                                                                     Padding="2,0,10,0" BorderThickness="0" Background="Transparent"
+                                                                     VerticalContentAlignment="Center">
+                                                                <TextBox.Style>
+                                                                    <Style TargetType="TextBox" BasedOn="{StaticResource BaseTextBox}">
+                                                                        <Setter Property="Template">
+                                                                            <Setter.Value>
+                                                                                <ControlTemplate TargetType="TextBox">
+                                                                                    <ScrollViewer x:Name="PART_ContentHost"
+                                                                                                  Margin="{TemplateBinding Padding}"
+                                                                                                  VerticalAlignment="Center"
+                                                                                                  Focusable="False"
+                                                                                                  Background="Transparent" />
+                                                                                </ControlTemplate>
+                                                                            </Setter.Value>
+                                                                        </Setter>
+                                                                    </Style>
+                                                                </TextBox.Style>
+                                                            </TextBox>
+                                                            <TextBlock Text="{Binding Placeholder}"
+                                                                       Foreground="{DynamicResource BrushPlaceholder}"
+                                                                       Margin="6,0,0,0" VerticalAlignment="Center"
+                                                                       IsHitTestVisible="False"
+                                                                       Visibility="{Binding Value, Converter={x:Static local:StringEmptyToVisibilityConverter.Instance}}" />
+                                                            <!-- 清空按钮：仅在输入框有值时显示 -->
+                                                            <Button Style="{StaticResource ClearButton}"
+                                                                    Command="{Binding ClearCommand}"
+                                                                    ToolTip="{x:Static local:Strings.ClearButtonToolTip}"
+                                                                    Visibility="{Binding Value, Converter={x:Static local:StringNotEmptyToVisibilityConverter.Instance}}" />
+                                                        </Grid>
+                                                    </Border>
+                                                </DockPanel>
+                                                <Grid Visibility="{Binding IsPath, Converter={x:Static local:InverseBoolToVisibilityConverter.Instance}}">
+                                                    <!-- 必填未填写时标红 -->
+                                                    <TextBox Text="{Binding Value, UpdateSourceTrigger=PropertyChanged}"
+                                                             ToolTip="{Binding Placeholder}"
+                                                             Padding="2,0,10,0">
+                                                        <TextBox.Style>
+                                                            <Style TargetType="TextBox" BasedOn="{StaticResource BaseTextBox}">
+                                                                <Style.Triggers>
+                                                                    <DataTrigger Binding="{Binding IsMissing}" Value="True">
+                                                                        <Setter Property="BorderBrush" Value="Red" />
+                                                                        <Setter Property="BorderThickness" Value="1.5" />
+                                                                    </DataTrigger>
+                                                                </Style.Triggers>
+                                                            </Style>
+                                                        </TextBox.Style>
+                                                    </TextBox>
+                                                    <TextBlock Text="{Binding Placeholder}"
+                                                               Foreground="{DynamicResource BrushPlaceholder}"
+                                                               Margin="6,0,0,0" VerticalAlignment="Center"
+                                                               IsHitTestVisible="False"
+                                                               Visibility="{Binding Value, Converter={x:Static local:StringEmptyToVisibilityConverter.Instance}}" />
+                                                    <!-- 清空按钮：仅在输入框有值时显示 -->
+                                                    <Button Style="{StaticResource ClearButton}"
+                                                            Command="{Binding ClearCommand}"
+                                                            ToolTip="{x:Static local:Strings.ClearButtonToolTip}"
+                                                            Visibility="{Binding Value, Converter={x:Static local:StringNotEmptyToVisibilityConverter.Instance}}" />
+                                                </Grid>
+                                            </Grid>
+                                        </StackPanel>
+                                    </DataTemplate>
+                                    </ItemsControl.ItemTemplate>
+                                </ItemsControl>
+                                </ScrollViewer>
+                            </Border>
+                        </DockPanel>
+
+                        <!-- 右：脚本预览（无参数时跨满两列占满整行，有参数时仅占右列） -->
+                        <DockPanel Grid.Row="1"
+                                   Grid.Column="{Binding HasParameters, Converter={x:Static local:BoolToGridColumnConverter.Instance}}"
+                                   Grid.ColumnSpan="{Binding HasParameters, Converter={x:Static local:BoolToGridColumnSpanConverter.Instance}}"
+                                   LastChildFill="True" MinWidth="0">
+                            <Border DockPanel.Dock="Top" Style="{StaticResource PanelHeader}"
+                                    BorderThickness="0,0,1,1">
+                                <DockPanel LastChildFill="True">
+                                    <StackPanel DockPanel.Dock="Right" Orientation="Horizontal" HorizontalAlignment="Right" VerticalAlignment="Center"
+                                                Visibility="{Binding HasScript, Converter={x:Static local:BooleanToVisibilityConverter.Instance}}"
+                                                IsEnabled="{Binding IsRunning, Converter={x:Static local:InverseBoolConverter.Instance}}">
+                                        <Button Style="{StaticResource BaseButtonLight}"
+                                                Command="{Binding CopyCommand}"
+                                                Width="24" Height="24" Padding="0"
+                                                Margin="0,0,3,0"
+                                                ToolTip="{x:Static local:Strings.BtnCopy}">
+                                            <svgc:SvgViewbox Width="13" Height="13"
+                                                             UriSource='pack://application:,,,/assets/images/button/copy.svg'
+                                                             HorizontalAlignment="Center" VerticalAlignment="Center" />
+                                        </Button>
+                                        <Button Style="{StaticResource BaseButtonLight}"
+                                                Command="{Binding ExportPreviewCommand}"
+                                                Width="24" Height="24" Padding="0"
+                                                Margin="0,0,3,0"
+                                                ToolTip="{x:Static local:Strings.BtnSave}">
+                                            <svgc:SvgViewbox Width="13" Height="13"
+                                                             UriSource='pack://application:,,,/assets/images/button/save.svg'
+                                                             HorizontalAlignment="Center" VerticalAlignment="Center" />
+                                        </Button>
+                                        <!-- 脚本预览显示选项：齿轮图标按钮，点击弹出下拉菜单（带勾选标记），所有脚本共享同一套开关 -->
+                                        <Button x:Name="BtnScriptOptions"
+                                                ToolTip="{x:Static local:Strings.BtnSettings}"
+                                                Style="{StaticResource BaseButtonLight}"
+                                                Width="24" Height="24" Padding="0"
+                                                Margin="0"
+                                                Click="BtnScriptOptions_Click">
+                                            <Button.Content>
+                                                <svgc:SvgViewbox Width="13" Height="13"
+                                                                 UriSource='pack://application:,,,/assets/images/button/settings.svg'
+                                                                 VerticalAlignment="Center" HorizontalAlignment="Center" />
+                                            </Button.Content>
+                                            <Button.ContextMenu>
+                                                <ContextMenu x:Name="ScriptOptionsMenu"
+                                                             Style="{StaticResource OptionsContextMenu}">
+                                                    <MenuItem x:Name="MenuScriptShowLineNumbers" Header="显示行号"
+                                                              IsCheckable="True"
+                                                              IsChecked="{Binding Tag.ScriptShowLineNumbers, RelativeSource={RelativeSource AncestorType=ContextMenu}, Mode=TwoWay}" />
+                                                    <MenuItem x:Name="MenuScriptWordWrap" Header="自动换行"
+                                                              IsCheckable="True"
+                                                              IsChecked="{Binding Tag.ScriptWordWrap, RelativeSource={RelativeSource AncestorType=ContextMenu}, Mode=TwoWay}" />
+                                                </ContextMenu>
+                                            </Button.ContextMenu>
+                                        </Button>
+                                    </StackPanel>
+                                    <TextBlock Text="{x:Static local:Strings.TitleScriptPreview}" Style="{StaticResource TitleText}" VerticalAlignment="Center" />
+                                </DockPanel>
+                            </Border>
+                            <Border BorderBrush="{DynamicResource BrushBorder}" BorderThickness="0,0,1,0">
+                                <ae:TextEditor x:Name="ScriptEditor"
+                                               FontFamily="Consolas" FontSize="12"
+                                               Background="{DynamicResource BrushEditorBg}"
+                                               Foreground="{DynamicResource BrushEditorFg}"
+                                               IsReadOnly="True"
+                                               ShowLineNumbers="{Binding Tag.ScriptShowLineNumbers, ElementName=RootWindow}"
+                                               WordWrap="{Binding Tag.ScriptWordWrap, ElementName=RootWindow}"
+                                               Style="{StaticResource ReadOnlyCodeViewer}"
+                                               VerticalScrollBarVisibility="Auto"
+                                               HorizontalScrollBarVisibility="Auto"
+                                               SyntaxHighlighting="PowerShell"
+                                               Document="{Binding ScriptDocument}" />
+                            </Border>
+                        </DockPanel>
+                    </Grid>
+                </Border>
+
+                <!-- 拖拽分隔条：调整上下两区高度，总和保持 100%。用 1px 实线 + 上/下各 2px 透明热区保证拖拽手感，视觉与其它 1px 边框齐平 -->
+                <GridSplitter Grid.Row="1" Height="5" HorizontalAlignment="Stretch"
+                              Background="Transparent" Cursor="SizeNS"
+                              ShowsPreview="False" />
+                <!-- 视觉分隔：1px 实线，与四周边框同色同粗 -->
+                <Rectangle Grid.Row="1" Height="3" VerticalAlignment="Center"
+                           Fill="{DynamicResource BrushBorder}"
+                           IsHitTestVisible="False" />
+
+                <!-- 下半区：日志（带行号，无语法高亮） -->
+                <Border Grid.Row="2" Style="{StaticResource PanelBorder}">
+                    <DockPanel MinWidth="0">
+                        <Border DockPanel.Dock="Top" Style="{StaticResource PanelHeader}"
+                                BorderThickness="0,0,1,1">
+                            <DockPanel LastChildFill="True">
+                                <StackPanel DockPanel.Dock="Right" Orientation="Horizontal" HorizontalAlignment="Right" VerticalAlignment="Center"
+                                            Visibility="{Binding HasScript, Converter={x:Static local:BooleanToVisibilityConverter.Instance}}"
+                                            IsEnabled="{Binding IsRunning, Converter={x:Static local:InverseBoolConverter.Instance}}">
+                                    <Button Style="{StaticResource BaseButtonLight}"
+                                            Command="{Binding CopyLogCommand}"
+                                            Width="24" Height="24" Padding="0"
+                                            Margin="0,0,3,0"
+                                            ToolTip="{x:Static local:Strings.BtnCopy}">
+                                        <svgc:SvgViewbox Width="13" Height="13"
+                                                         UriSource='pack://application:,,,/assets/images/button/copy.svg'
+                                                         HorizontalAlignment="Center" VerticalAlignment="Center" />
+                                        </Button>
+                                        <Button Style="{StaticResource BaseButtonLight}"
+                                            Command="{Binding ClearLogCommand}"
+                                            Width="24" Height="24" Padding="0"
+                                            Margin="0,0,3,0"
+                                            ToolTip="{x:Static local:Strings.BtnClear}">
+                                        <svgc:SvgViewbox Width="13" Height="13"
+                                                         UriSource='pack://application:,,,/assets/images/button/trash-2.svg'
+                                                         HorizontalAlignment="Center" VerticalAlignment="Center" />
+                                    </Button>
+                                    <!-- 日志显示选项：齿轮图标按钮，点击弹出下拉菜单（带勾选标记），所有脚本共享同一套开关 -->
+                                    <Button x:Name="BtnLogOptions"
+                                            ToolTip="{x:Static local:Strings.BtnSettings}"
+                                            Style="{StaticResource BaseButtonLight}"
+                                            Width="24" Height="24" Padding="0"
+                                            Margin="0"
+                                            Click="BtnLogOptions_Click">
+                                        <Button.Content>
+                                            <svgc:SvgViewbox Width="13" Height="13"
+                                                             UriSource='pack://application:,,,/assets/images/button/settings.svg'
+                                                             VerticalAlignment="Center" HorizontalAlignment="Center" />
+                                        </Button.Content>
+                                        <Button.ContextMenu>
+                                            <ContextMenu x:Name="LogOptionsMenu"
+                                                         Style="{StaticResource OptionsContextMenu}">
+                                                <MenuItem x:Name="MenuShowLineNumbers" Header="显示行号"
+                                                          IsCheckable="True"
+                                                          IsChecked="{Binding Tag.ShowLineNumbers, RelativeSource={RelativeSource AncestorType=ContextMenu}, Mode=TwoWay}" />
+                                                <MenuItem x:Name="MenuShowTimestamp" Header="显示时间"
+                                                          IsCheckable="True"
+                                                          IsChecked="{Binding Tag.ShowTimestamp, RelativeSource={RelativeSource AncestorType=ContextMenu}, Mode=TwoWay}" />
+                                            </ContextMenu>
+                                        </Button.ContextMenu>
+                                    </Button>
+                                </StackPanel>
+                                <TextBlock Text="{x:Static local:Strings.TitleExecLog}" Style="{StaticResource TitleText}" VerticalAlignment="Center" />
+                            </DockPanel>
+                        </Border>
+                        <Border BorderBrush="{DynamicResource BrushBorder}" BorderThickness="0,0,1,1">
+                            <!-- 与脚本预览面板(ScriptEditor)保持一致的字体/字号/行高，视觉统一 -->
+                            <RichTextBox x:Name="LogBox"
+                                         FontFamily="Consolas" FontSize="12"
+                                         Background="{DynamicResource BrushLogBg}"
+                                         SelectionBrush="{DynamicResource BrushLogSelection}"
+                                         IsReadOnly="True" IsDocumentEnabled="True"
+                                         VerticalScrollBarVisibility="Auto"
+                                         HorizontalScrollBarVisibility="Auto"
+                                         BorderThickness="0">
+                                <RichTextBox.Resources>
+                                    <!-- 去掉 RichTextBox 默认的内边距与段落间距，日志贴边紧凑显示。
+                                         LineHeight=16 与 AvalonEdit 12pt Consolas 的自然行高对齐。 -->
+                                    <Style TargetType="{x:Type Paragraph}">
+                                        <Setter Property="Margin" Value="0" />
+                                        <Setter Property="Padding" Value="0" />
+                                        <Setter Property="LineHeight" Value="16" />
+                                    </Style>
+                                </RichTextBox.Resources>
+                            </RichTextBox>
+                        </Border>
+                    </DockPanel>
+                </Border>
+            </Grid>
+        </Grid>
+    </DockPanel>
+</Window>

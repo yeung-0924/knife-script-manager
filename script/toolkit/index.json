@@ -1,0 +1,32 @@
+[
+  {
+    "name": "SVG 转 ICO",
+    "path": "./image/svg_to_ico.py",
+    "lang": "python",
+    "params": [
+      {
+        "name": "SVG_PATH",
+        "label": "输入文件",
+        "default": "",
+        "required": true,
+        "type": "file",
+        "placeholder": "选择 .svg 文件，如 C:\\Users\\PC\\app.svg"
+      },
+      {
+        "name": "OUT_PATH",
+        "label": "输出目录",
+        "default": "",
+        "required": false,
+        "type": "folder",
+        "placeholder": "选择 .ico 的输出目录，如 C:\\Users\\PC\\output"
+      },
+      {
+        "name": "SIZES",
+        "label": "尺寸列表",
+        "default": "16,24,32,48,64,256",
+        "required": true,
+        "placeholder": "16,24,32,48,64,128,256"
+      }
+    ]
+  }
+]
