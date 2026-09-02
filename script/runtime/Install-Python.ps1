@@ -223,7 +223,7 @@ if ($DownloadSource -ieq '华为云镜像') {
     SayC $YELLOW '信息' "从华为云镜像查询 Python $majorMinor 的最新版本..."
     try {
         $html = (Invoke-WebRequest -Uri 'https://mirrors.huaweicloud.com/python/' `
-            -UseBasicParsing -Headers @{ 'User-Agent' = 'script-manager-win' } -TimeoutSec 60 -ErrorAction Stop).Content
+            -UseBasicParsing -Headers @{ 'User-Agent' = 'knife-script-manager' } -TimeoutSec 60 -ErrorAction Stop).Content
         $verPat = "^$([regex]::Escape($majorMinor))\.\d+$"
         $versions = @([regex]::Matches($html, 'href="([^"]+)"') |
             ForEach-Object { $_.Groups[1].Value.TrimEnd('/') } |
@@ -253,7 +253,7 @@ if ($DownloadSource -ieq '华为云镜像') {
     try {
         $req = [System.Net.HttpWebRequest]::Create($downloadUrl)
         $req.Timeout = 60000
-        $req.UserAgent = 'script-manager-win'
+        $req.UserAgent = 'knife-script-manager'
         $resp = $req.GetResponse()
         $total = $resp.ContentLength
         $stream = $resp.GetResponseStream()
@@ -382,7 +382,7 @@ if ($DownloadSource -ieq '华为云镜像') {
         try {
             # 查最近 5 个 release（python-build-standalone 每个 release 通常包含当时所有活跃版本）
             $releases = Invoke-RestMethod -Uri 'https://api.github.com/repos/astral-sh/python-build-standalone/releases?per_page=5' `
-                -Headers @{ 'User-Agent' = 'script-manager-win' } -ErrorAction Stop
+                -Headers @{ 'User-Agent' = 'knife-script-manager' } -ErrorAction Stop
             foreach ($rel in $releases) {
                 $asset = $rel.assets | Where-Object { $_.name -match $assetRegex } | Select-Object -First 1
                 if ($asset) { $relTag = $rel.tag_name; break }
@@ -415,7 +415,7 @@ if ($DownloadSource -ieq '华为云镜像') {
         try {
             $req = [System.Net.HttpWebRequest]::Create($downloadUrl)
             $req.Timeout = 60000
-            $req.UserAgent = 'script-manager-win'
+            $req.UserAgent = 'knife-script-manager'
             $resp = $req.GetResponse()
             $zipPath = Join-Path $tmpDir $asset.name
             $total = $resp.ContentLength

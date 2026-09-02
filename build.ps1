@@ -1,4 +1,4 @@
-﻿# build.ps1 - 一键发布 script-manager-win
+﻿# build.ps1 - 一键发布 knife-script-manager
 # 产物进入 dist/，包含两个版本（目录结构一致，区别仅在于是否内置 .NET）：
 #   dist/ScriptManagerPortable/  自包含单文件 exe（内置 .NET 运行时，开箱即用）
 #   dist/ScriptManager/          依赖框架版（不内置 .NET，需用户机器已安装 .NET 运行时）

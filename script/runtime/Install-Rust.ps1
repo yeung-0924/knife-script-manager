@@ -242,7 +242,7 @@ if ($existingRust) {
         try {
             $req = [System.Net.HttpWebRequest]::Create('https://static.rust-lang.org/dist/channel-rust-stable.toml')
             $req.Timeout = 60000
-            $req.UserAgent = 'script-manager-win'
+            $req.UserAgent = 'knife-script-manager'
             $resp = $req.GetResponse()
             $stream = $resp.GetResponseStream()
             $fs = New-Object System.IO.FileStream($tomlPath, [System.IO.FileMode]::Create, [System.IO.FileAccess]::Write)
@@ -290,7 +290,7 @@ if ($existingRust) {
     try {
         $req = [System.Net.HttpWebRequest]::Create($downloadUrl)
         $req.Timeout = 60000
-        $req.UserAgent = 'script-manager-win'
+        $req.UserAgent = 'knife-script-manager'
         $resp = $req.GetResponse()
         $total = $resp.ContentLength
         $stream = $resp.GetResponseStream()

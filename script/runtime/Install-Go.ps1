@@ -226,7 +226,7 @@ if ($existingGo) {
     SayC $YELLOW '信息' "从 go.dev 查询 Go $major 的最新稳定版本..."
     try {
         $dl = Invoke-RestMethod -Uri 'https://go.dev/dl/?mode=json' `
-            -Headers @{ 'User-Agent' = 'script-manager-win' } -ErrorAction Stop
+            -Headers @{ 'User-Agent' = 'knife-script-manager' } -ErrorAction Stop
         $hit = $dl | Where-Object {
             $_.stable -and $_.version -match "^go$([regex]::Escape($major))\."
         } | Select-Object -First 1
@@ -252,7 +252,7 @@ if ($existingGo) {
     try {
         $req = [System.Net.HttpWebRequest]::Create($downloadUrl)
         $req.Timeout = 60000
-        $req.UserAgent = 'script-manager-win'
+        $req.UserAgent = 'knife-script-manager'
         $resp = $req.GetResponse()
         $total = $resp.ContentLength
         $stream = $resp.GetResponseStream()

@@ -221,7 +221,7 @@ if ($existingNode) {
     SayC $YELLOW '信息' "从 nodejs.org 查询 Node.js $major 的最新 LTS 版本..."
     try {
         $idx = Invoke-RestMethod -Uri 'https://nodejs.org/dist/index.json' `
-            -Headers @{ 'User-Agent' = 'script-manager-win' } -ErrorAction Stop
+            -Headers @{ 'User-Agent' = 'knife-script-manager' } -ErrorAction Stop
         $hit = $idx | Where-Object {
             $_.version -match "^v$([regex]::Escape($major))\." -and $_.lts
         } | Select-Object -First 1
@@ -247,7 +247,7 @@ if ($existingNode) {
     try {
         $req = [System.Net.HttpWebRequest]::Create($downloadUrl)
         $req.Timeout = 60000
-        $req.UserAgent = 'script-manager-win'
+        $req.UserAgent = 'knife-script-manager'
         $resp = $req.GetResponse()
         $total = $resp.ContentLength
         $stream = $resp.GetResponseStream()

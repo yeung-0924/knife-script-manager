@@ -1,12 +1,12 @@
 ---
 name: script-output-style
-description: 脚本执行日志输出规范（颜色 + 标识），适用于 script-manager-win 的正式脚本。编写/修改 script/ 下任何脚本的标准输出日志时，优先按本技能约束——本规范优于模型的泛化经验。
+description: 脚本执行日志输出规范（颜色 + 标识），适用于 knife-script-manager 的正式脚本。编写/修改 script/ 下任何脚本的标准输出日志时，优先按本技能约束——本规范优于模型的泛化经验。
 agent_created: true
 ---
 
 # 脚本执行日志输出规范（颜色 + 标识）
 
-适用于 `script-manager-win` 的**正式脚本**（`script/` 下除 `demo/` 与 `test/` 之外的所有 `.ps1`/`.bat`/`.cmd`/`.py`/`.java`/`.sh`）。
+适用于 `knife-script-manager` 的**正式脚本**（`script/` 下除 `demo/` 与 `test/` 之外的所有 `.ps1`/`.bat`/`.cmd`/`.py`/`.java`/`.sh`）。
 当你编写、修改脚本里"打印给用户看的运行日志"时，优先按本规范，而不是依赖通用习惯。
 
 ## 何时使用
@@ -79,7 +79,7 @@ echo %RED%[异常]%RESET% 连接失败
 ```
 > **必做**：任何带颜色的 bat 都必须先生成 `ESC`（上面的两行），否则 `%ESC%` 为空，输出裸 `[92m` 不上色。
 > 注意：本项目禁止用 `for /f` 捕获外部命令输出（会破坏批处理文件指针、导致 goto 失败），但**仅用 `for /f` 生成 ESC 这两行是允许的**，因为它不读取脚本内部结果、也不依赖后续 goto。
-> 注意：cmd 注释禁用半角 `>`/`<`/`|`/`&`（用全角 `→`）；不要在 `for /f ... in ('命令')` 里捕获进程输出（会破坏 goto 且本项目已禁用该写法）。详见 script-manager-win 记忆文件。
+> 注意：cmd 注释禁用半角 `>`/`<`/`|`/`&`（用全角 `→`）；不要在 `for /f ... in ('命令')` 里捕获进程输出（会破坏 goto 且本项目已禁用该写法）。详见 knife-script-manager 记忆文件。
 
 ### Python (`.py`)
 ```python

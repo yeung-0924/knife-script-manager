@@ -287,7 +287,7 @@ if ($existingJdk) {
             $repo = "dragonwell-project/dragonwell$major"
             SayC $YELLOW '信息' "查询 $repo 最新 release..."
             try {
-                $release = Invoke-RestMethod -Uri "https://api.github.com/repos/$repo/releases/latest" -Headers @{ 'User-Agent' = 'script-manager-win' } -TimeoutSec 30
+                $release = Invoke-RestMethod -Uri "https://api.github.com/repos/$repo/releases/latest" -Headers @{ 'User-Agent' = 'knife-script-manager' } -TimeoutSec 30
                 # 仅匹配主安装包（..._x64_windows.zip），排除 -fix 修复包、.sha256 等附加资产
                 $asset = $release.assets | Where-Object { $_.name -match '_x64_windows\.zip$' } | Select-Object -First 1
                 if (-not $asset) {
@@ -317,7 +317,7 @@ if ($existingJdk) {
     try {
         $req = [System.Net.HttpWebRequest]::Create($downloadUrl)
         $req.Timeout = 60000
-        $req.UserAgent = 'script-manager-win'
+        $req.UserAgent = 'knife-script-manager'
         $resp = $req.GetResponse()
         # 部分源（如 aka.ms）会 302 重定向到 CDN，最终 URL 才是真实包名（如 microsoft-jdk-21.0.12.1-windows-x64.zip）
         $packageName = [System.IO.Path]::GetFileName($resp.ResponseUri.AbsoluteUri)

@@ -1,10 +1,10 @@
-# script-manager-win
+# knife-script-manager
 
 Windows 双击即用的脚本管理器。读取 exe 同级 `script/index.json` 列出脚本，点击「执行」即可运行，右侧实时显示日志与报错。
 
 ## 目录结构
 ```
-script-manager-win/
+knife-script-manager/
   script/                 # 脚本与配置（与 exe 同级分发，用户可直接编辑）
     index.json            # 脚本列表配置（数组）
     *.cmd / *.bat / *.ps1 / *.go / *.rs / *.js / *.py / *.java / *.sh  # 你的脚本（按语言扩展名）
@@ -38,17 +38,17 @@ exe 启动后只加载**一处**脚本：exe 同级的 `script/` 目录（含 `i
 
 **构建便携版（自包含，内置 .NET，约 154MB，开箱即用）：**
 ```
-powershell -ExecutionPolicy Bypass -NoProfile -File "d:\Workspace\knife\script-manager-win\build.ps1" -Edition Portable
+powershell -ExecutionPolicy Bypass -NoProfile -File "d:\Workspace\knife\knife-script-manager\build.ps1" -Edition Portable
 ```
 
 **构建标准版（依赖框架，不内置 .NET，需用户机器已装 .NET 10 运行时）：**
 ```
-powershell -ExecutionPolicy Bypass -NoProfile -File "d:\Workspace\knife\script-manager-win\build.ps1" -Edition Standard
+powershell -ExecutionPolicy Bypass -NoProfile -File "d:\Workspace\knife\knife-script-manager\build.ps1" -Edition Standard
 ```
 
 **两者都构建（默认）：**
 ```
-powershell -ExecutionPolicy Bypass -NoProfile -File "d:\Workspace\knife\script-manager-win\build.ps1"
+powershell -ExecutionPolicy Bypass -NoProfile -File "d:\Workspace\knife\knife-script-manager\build.ps1"
 ```
 
 脚本会自动把 `ScriptManager.exe` 放入 `dist/ScriptManagerPortable/`（或 `dist/ScriptManager/`），并把 `script/` 与 `config/` 整体复制到对应目录（与 exe 同级，用户可编辑）。
