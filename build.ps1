@@ -3,6 +3,7 @@
 #   dist/ScriptManagerPortable/  自包含单文件 exe（内置 .NET 运行时，开箱即用）
 #   dist/ScriptManager/          依赖框架版（不内置 .NET，需用户机器已安装 .NET 运行时）
 # 两个目录均含：ScriptManager.exe + script\（脚本目录）+ lib\（第三方依赖，如 jar）+ config\（用户配置文件），与 exe 同级，用户可编辑。
+# 注：script/ 与 lib/ 复制时会跳过 .gitignore 命中的文件（如本地 IDE 生成的 *.iml / .idea/），确保本地 dist 与干净发布包一致。
 # cache\（缓存）与 log\（日志）不预生成，运行时由程序在 exe 同级自动创建。
 #
 # 用法：
@@ -236,6 +237,53 @@ function Publish-Exe {
     }
 }
 
+# ---- 干净复制：跳过 .gitignore 命中的文件/目录 ----
+# 组装 dist 时，script/ 与 lib/ 可能含有本地 IDE 生成的垃圾（如 *.iml、.idea/），它们已被仓库
+# .gitignore 忽略、不进版本库，但本地磁盘上存在；若直接 Copy-Item 整目录会连同打进发布包，
+# 导致本地 dist 与 CI / GitHub Release 的干净包不一致（曾出现本地 dist 混入 3 个 .iml、比发布包多 21KB）。
+# 这里改为对每个文件用 `git check-ignore` 判定，命中则跳过，使 dist 与“干净源码树”完全一致。
+# git 不可用（如非仓库环境）时退化为跳过已知 IDE 垃圾模式（*.iml / .idea / .vs / bin / obj 等）。
+function Copy-CleanTree {
+    param([string]$src, [string]$dst)
+
+    # 是否在 git 工作树内（决定用 .gitignore 还是退化规则）
+    $useGit = $false
+    try {
+        & git -C $rootDir rev-parse --is-inside-work-tree 2>$null | Out-Null
+        $useGit = ($LASTEXITCODE -eq 0)
+    } catch { $useGit = $false }
+
+    if (-not (Test-Path $dst)) { New-Item -ItemType Directory -Path $dst -Force | Out-Null }
+
+    $files = Get-ChildItem -LiteralPath $src -Recurse -Force | Where-Object { -not $_.PSIsContainer }
+    foreach ($f in $files) {
+        # 源目录下的相对路径（保留子目录结构）
+        $rel = $f.FullName.Substring($src.TrimEnd('\', '/').Length).TrimStart('\', '/')
+        $skip = $false
+        if ($useGit) {
+            # git check-ignore 对“被忽略”的文件/目录返回退出码 0（含其祖先目录被忽略的情况）
+            $relGit = $rel -replace '\\', '/'
+            & git -C $rootDir check-ignore -q -- $relGit 2>$null
+            $skip = ($LASTEXITCODE -eq 0)
+        } else {
+            # 退化规则：跳过已知 IDE / 编译垃圾
+            if ($rel -match '\.iml$' `
+                -or $rel -match '[/\\]\.idea($|[/\\])' -or $rel -match '[/\\]\.vs($|[/\\])' `
+                -or $rel -match '[/\\]bin($|[/\\])' -or $rel -match '[/\\]obj($|[/\\])' `
+                -or $rel -match '\.user$' -or $rel -match '\.suo$' `
+                -or $f.Name -eq 'Thumbs.db' -or $f.Name -eq 'Desktop.ini') {
+                $skip = $true
+            }
+        }
+        if ($skip) { continue }
+
+        $target = Join-Path $dst $rel
+        $td = Split-Path $target -Parent
+        if (-not (Test-Path $td)) { New-Item -ItemType Directory -Path $td -Force | Out-Null }
+        Copy-Item -LiteralPath $f.FullName $target -Force
+    }
+}
+
 # ---- 组装交付目录 ----
 # $outDir: 目标子目录（如 dist/ScriptManagerPortable）
 function Assemble-Dist {
@@ -267,7 +315,8 @@ function Assemble-Dist {
         if (Test-Path $scriptDst) { Remove-Item $scriptDst -Recurse -Force -ErrorAction SilentlyContinue }
         # 确保目标目录存在，然后复制“源目录下的内容”而不是目录本身，避免残留目标目录时变成 script/script。
         if (-not (Test-Path $scriptDst)) { New-Item -ItemType Directory -Path $scriptDst -Force | Out-Null }
-        Copy-Item "$scriptSrc\*" $scriptDst -Recurse -Force
+        # 干净复制：跳过 .gitignore 命中的 IDE 垃圾（如 *.iml），使 dist 与发布包一致
+        Copy-CleanTree -src $scriptSrc -dst $scriptDst
         Write-Host "==> 已复制脚本目录 -> $scriptDst"
     }
 
@@ -280,8 +329,8 @@ function Assemble-Dist {
         if (Test-Path $libDst) { Remove-Item $libDst -Recurse -Force -ErrorAction SilentlyContinue }
         # 重新创建目标目录，再复制内容，避免残留目标目录时变成 lib/lib。
         if (-not (Test-Path $libDst)) { New-Item -ItemType Directory -Path $libDst -Force | Out-Null }
-        # 整目录复制 lib/，但排除 .gitkeep 等占位文件（不进交付包）
-        Copy-Item "$libSrc\*" $libDst -Recurse -Force -Exclude ".gitkeep"
+        # 干净复制：跳过 .gitignore 命中的文件，使 dist 与发布包一致（原 .gitkeep 占位本就不进交付包）
+        Copy-CleanTree -src $libSrc -dst $libDst
         Write-Host "==> 已复制依赖目录 -> $libDst"
     }
 
@@ -326,6 +375,18 @@ function Assemble-Dist {
         Write-Host "==> 已复制用户配置文件 -> $configDst (来源: $(Split-Path $configSrc -Leaf))"
     }
 
+    # 2.7) 文件夹图标库：assets/fColors.icl -> outDir/config/fColors.icl
+    #      供运行时在各标准目录生成的 desktop.ini 通过相对路径 ..\config\fColors.icl 引用，
+    #      使 config/log/cache/lib/runtime/script 等文件夹显示彩色图标（详见 src/FolderCustomizer.cs）。
+    $iconLib = Join-Path $rootDir "assets\fColors.icl"
+    if (Test-Path $iconLib) {
+        if (-not (Test-Path $configDir)) { New-Item -ItemType Directory -Path $configDir -Force | Out-Null }
+        Copy-Item $iconLib (Join-Path $configDir "fColors.icl") -Force
+        Write-Host "==> 已复制文件夹图标库 -> $(Join-Path $configDir 'fColors.icl')"
+    } else {
+        Write-Host "==> 警告：未找到 assets/fColors.icl，文件夹变色功能将不可用" -ForegroundColor Yellow
+    }
+
 }
 
 # ---- 按所选版本构建 ----
@@ -363,7 +424,7 @@ if ($Edition -eq "Standard" -or $Edition -eq "Both") {
     Write-Host "    - $simpleDir    （依赖框架，需用户机器安装 .NET 运行时）"
 }
 Write-Host "    目录结构一致：ScriptManager.exe + script\ + lib\ + config\，与 exe 同级，用户可编辑。"
-Write-Host "    （cache\ 与 log\ 不打包，运行时由程序自动创建）"
+Write-Host "    （cache\ 与 log\ 不打包，运行时由程序自动创建；config\fColors.icl 供文件夹变色功能引用）"
 
 # 打包成功，清理可能残留的 error.log（若有），避免误导用户以为上次失败
 foreach ($d in @($portableDir, $simpleDir)) {

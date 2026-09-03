@@ -16,6 +16,8 @@ public partial class App : Application
     {
         var logDir = AppConfig.LogDir;
         Directory.CreateDirectory(logDir); // 配置的日志目录可能不存在（含 UNC），确保可写
+        // 为各标准目录套用彩色文件夹样式（desktop.ini + System 属性）。放在最早期，不受后续 UI 初始化成败影响。
+        FolderCustomizer.ApplyToStandardDirs();
         var logPath = Path.Combine(logDir, "error.log");
 
         void Write(string kind, Exception? ex)

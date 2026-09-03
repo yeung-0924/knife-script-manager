@@ -25,7 +25,7 @@ public static class AppConfig
     private static readonly string ExeDir =
         Path.GetDirectoryName(Environment.ProcessPath) ?? AppContext.BaseDirectory;
 
-    private static readonly string ConfigDir = Path.Combine(ExeDir, "config");
+    public static readonly string ConfigDir = Path.Combine(ExeDir, "config");
     private static readonly string ConfigPath = Path.Combine(ConfigDir, "config.ini");
 
     // section(lower) -> (key(lower) -> value)
