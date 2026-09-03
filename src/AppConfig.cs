@@ -9,11 +9,13 @@ namespace ScriptManager;
 /// <summary>
 /// 用户侧配置：读取 exe 同级的 config/config.ini。修改后重启程序生效。
 /// 当前支持（[script] 节）：
-///   script_path = 脚本目录路径（默认 script，目录下固定查找 index.json）
-///   lib_path    = 第三方依赖目录（默认 lib，如 JDBC jar；注入环境变量 SCRIPT_MANAGER_LIB）
-///   runtime_path = 运行时安装目录（默认 runtime；注入环境变量 SCRIPT_MANAGER_RUNTIME，供安装脚本默认使用）
-///   cache_path  = 缓存文件目录（默认 cache）
-///   log         = 日志文件目录（默认 log，如 error.log）
+///   default_script_file = 默认脚本索引文件（指向 index.json，默认 script\index.json；相对路径相对 exe 目录，绝对/UNC 直接用）
+///   user_script_file    = 用户通过「打开」按钮选择的脚本索引文件（程序自动写入；留空则回退 default_script_file）
+///   lib_dir    = 第三方依赖目录（默认 lib，如 JDBC jar；注入环境变量 SCRIPT_MANAGER_LIB）
+///   runtime_dir = 运行时安装目录（默认 runtime；注入环境变量 SCRIPT_MANAGER_RUNTIME，供安装脚本默认使用）
+///   cache_dir  = 缓存文件目录（默认 cache）
+///   log_dir    = 日志文件目录（默认 log，如 error.log）
+///   default_timeout = 脚本默认执行超时（秒，0/留空=不限制）
 /// 路径规则：留空/被注释则使用默认值；填相对路径则相对 exe 目录解析；填绝对路径（含 UNC 如 \\Mac\Home\...）则直接使用。
 /// 后续新增配置项，在此追加对应的静态属性并从 Sections 取值即可。
 /// </summary>
@@ -42,23 +44,40 @@ public static class AppConfig
         return Path.GetFullPath(raw);
     }
 
-    /// <summary>脚本目录路径（来自配置的 script_path，默认 exe 同级 script）。</summary>
-    public static string ScriptDir => ResolveDir("script", "script_path", "script");
+    /// <summary>
+    /// 默认脚本索引文件（指向 index.json）的完整路径，来自配置的 [script] default_script_file。
+    /// 留空/注释则默认 exe 同级 script\index.json；相对路径相对 exe 目录解析；绝对路径（含 UNC）直接使用。
+    /// </summary>
+    public static string DefaultScriptFilePath
+    {
+        get
+        {
+            var raw = GetValue("script", "default_script_file")?.Trim();
+            if (string.IsNullOrWhiteSpace(raw))
+                return Path.GetFullPath(Path.Combine(ExeDir, "script", "index.json"));
+            return Path.IsPathRooted(raw)
+                ? Path.GetFullPath(raw)
+                : Path.GetFullPath(Path.Combine(ExeDir, raw));
+        }
+    }
 
-    /// <summary>第三方依赖目录（来自配置的 lib_path，默认 exe 同级 lib；注入环境变量 SCRIPT_MANAGER_LIB 供脚本引用）。</summary>
-    public static string LibDir => ResolveDir("script", "lib_path", "lib");
+    /// <summary>脚本目录路径 = 默认脚本索引文件所在目录（由 DefaultScriptFilePath 推导）。</summary>
+    public static string ScriptDir => Path.GetDirectoryName(DefaultScriptFilePath) ?? Path.Combine(ExeDir, "script");
+
+    /// <summary>第三方依赖目录（来自配置的 lib_dir，默认 exe 同级 lib；注入环境变量 SCRIPT_MANAGER_LIB 供脚本引用）。</summary>
+    public static string LibDir => ResolveDir("script", "lib_dir", "lib");
 
     /// <summary>
-    /// 运行时安装目录（来自配置的 runtime_path，默认 exe 同级 runtime；注入环境变量 SCRIPT_MANAGER_RUNTIME 供脚本引用）。
+    /// 运行时安装目录（来自配置的 runtime_dir，默认 exe 同级 runtime；注入环境变量 SCRIPT_MANAGER_RUNTIME 供脚本引用）。
     /// 安装类脚本（Install-*.ps1）在未指定安装目录时以此作为默认目标；目录不存在时由脚本自行创建。
     /// </summary>
-    public static string RuntimeDir => ResolveDir("script", "runtime_path", "runtime");
+    public static string RuntimeDir => ResolveDir("script", "runtime_dir", "runtime");
 
-    /// <summary>缓存文件目录（来自配置的 cache_path，默认 exe 同级 cache）。</summary>
-    public static string CacheDir => ResolveDir("script", "cache_path", "cache");
+    /// <summary>缓存文件目录（来自配置的 cache_dir，默认 exe 同级 cache）。</summary>
+    public static string CacheDir => ResolveDir("script", "cache_dir", "cache");
 
-    /// <summary>日志文件目录（来自配置的 log，默认 exe 同级 log）。</summary>
-    public static string LogDir => ResolveDir("script", "log", "log");
+    /// <summary>日志文件目录（来自配置的 log_dir，默认 exe 同级 log）。</summary>
+    public static string LogDir => ResolveDir("script", "log_dir", "log");
 
     /// <summary>
     /// 脚本默认执行超时（秒）。0 或负数表示不限制（无限等待，默认）。
@@ -74,41 +93,43 @@ public static class AppConfig
         }
     }
 
-    /// <summary>脚本索引 json 的完整路径 = 脚本目录下的 index.json（固定文件名）。找不到则 Load 返回空树。</summary>
-    public static string ScriptIndexJsonPath => Path.Combine(ScriptDir, "index.json");
+    /// <summary>脚本索引 json 的完整路径（固定为 DefaultScriptFilePath）。</summary>
+    public static string ScriptIndexJsonPath => DefaultScriptFilePath;
 
     /// <summary>
-    /// 最近一次「打开」按钮选择并成功加载的脚本目录（绝对路径）。
-    /// 为空表示未持久化（或所选目录已被移除），启动时回退到默认内置 script 目录。
-    /// 仅用于记住用户选择，使重启后自动加载该目录；不影响其它配置项。
-    /// 相对路径按 exe 目录解析（与 script_path 一致），绝对路径（含 UNC）直接使用。
+    /// 最近一次「打开」按钮选择的脚本索引文件（index.json）绝对路径。
+    /// 为空表示未持久化（或所选文件已被移除），启动时回退到默认 default_script_file。
+    /// 仅用于记住用户选择，使重启后自动加载该文件；不影响其它配置项。
+    /// 相对路径按 exe 目录解析（与 default_script_file 一致），绝对路径（含 UNC）直接使用。
     /// </summary>
-    public static string OpenScriptDir
+    public static string UserScriptFilePath
     {
         get
         {
-            var raw = GetValue("script", "open_dir")?.Trim();
+            var raw = GetValue("script", "user_script_file")?.Trim();
             if (string.IsNullOrWhiteSpace(raw)) return "";
-            return Path.IsPathRooted(raw) ? Path.GetFullPath(raw) : Path.Combine(ExeDir, raw);
+            return Path.IsPathRooted(raw)
+                ? Path.GetFullPath(raw)
+                : Path.GetFullPath(Path.Combine(ExeDir, raw));
         }
     }
 
     /// <summary>
-    /// 运行时持久化「打开」选择的脚本目录到 config.ini 的 [script] open_dir。
+    /// 运行时持久化「打开」选择的脚本索引文件到 config.ini 的 [script] user_script_file（存绝对路径）。
     /// 保留其它 section / key / 注释与顺序；文件或 [script] 节不存在则创建。
-    /// 同时更新内存缓存，使同进程内 OpenScriptDir 即时反映新值。写入失败仅记调试日志、不抛异常。
+    /// 同时更新内存缓存，使同进程内 UserScriptFilePath 即时反映新值。写入失败仅记调试日志、不抛异常。
     /// </summary>
-    public static void SetOpenScriptDir(string dir)
+    public static void SetUserScriptFilePath(string file)
     {
-        if (string.IsNullOrWhiteSpace(dir)) return;
+        if (string.IsNullOrWhiteSpace(file)) return;
         try
         {
             var lines = File.Exists(ConfigPath)
                 ? new List<string>(File.ReadAllLines(ConfigPath))
                 : new List<string>();
             const string sec = "script";
-            const string k = "open_dir";
-            var v = dir.Trim();
+            const string k = "user_script_file";
+            var v = Path.GetFullPath(file);
 
             var secIdx = -1;
             for (var i = 0; i < lines.Count; i++)
@@ -157,14 +178,14 @@ public static class AppConfig
             Directory.CreateDirectory(ConfigDir);
             File.WriteAllLines(ConfigPath, lines, new UTF8Encoding(false));
 
-            // 同步内存缓存，使本进程内 OpenScriptDir 立即返回新值（该值仅启动时读取，仍保持一致性）
+            // 同步内存缓存，使本进程内 UserScriptFilePath 立即返回新值
             if (!Sections.ContainsKey(sec))
                 Sections[sec] = new Dictionary<string, string>(StringComparer.OrdinalIgnoreCase);
             Sections[sec][k] = v;
         }
         catch (Exception ex)
         {
-            Debug.WriteLine("写入 config.ini (open_dir) 失败: " + ex.Message);
+            Debug.WriteLine("写入 config.ini (user_script_file) 失败: " + ex.Message);
         }
     }
 

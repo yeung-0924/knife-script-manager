@@ -6,7 +6,7 @@ using System.Text.Json;
 namespace ScriptManager.Cache;
 
 /// <summary>
-/// 统一缓存基础设施：所有缓存文件都放在配置的缓存目录下（默认 exe 同级 cache/，可用 config.ini 的 cache_path 覆盖）。
+/// 统一缓存基础设施：所有缓存文件都放在配置的缓存目录下（默认 exe 同级 cache/，可用 config.ini 的 cache_dir 覆盖）。
 /// 具体缓存内容各自实现为独立的 JSON 文件（如 window-state.json），
 /// 便于后续持续扩展更多缓存项，且互不影响。
 /// </summary>

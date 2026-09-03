@@ -291,7 +291,7 @@ external/
 
 ## 三-B、外部依赖（lib 约定目录）
 
-第三方依赖统一放在 `lib/`（由 `config.ini` 的 `lib_path` 配置，默认 exe 同级 `lib`）。运行时程序会注入环境变量 `SCRIPT_MANAGER_LIB` 指向该目录根路径，供脚本引用。
+第三方依赖统一放在 `lib/`（由 `config.ini` 的 `lib_dir` 配置，默认 exe 同级 `lib`）。运行时程序会注入环境变量 `SCRIPT_MANAGER_LIB` 指向该目录根路径，供脚本引用。
 
 **约定：依赖必须按语言放入约定子目录，放错目录名（如 `lib/java1`）不生效**：
 

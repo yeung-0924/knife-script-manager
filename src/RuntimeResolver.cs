@@ -62,9 +62,9 @@ public static class RuntimeResolver
     /// <summary>
     /// 脚本可见的环境变量（脚本管理器提供的目录信息），是进程注入与提权 set 行的<b>唯一来源</b>：
     /// <list type="bullet">
-    /// <item>SCRIPT_MANAGER_LIB：第三方依赖目录（配置项 lib_path，默认 exe 同级 lib），
+    /// <item>SCRIPT_MANAGER_LIB：第三方依赖目录（配置项 lib_dir，默认 exe 同级 lib），
     /// 例如 Java 脚本：<c>java -cp "%SCRIPT_MANAGER_LIB%\xxx.jar" Script.java</c></item>
-    /// <item>SCRIPT_MANAGER_RUNTIME：运行时安装目录（配置项 runtime_path，默认 exe 同级 runtime），
+    /// <item>SCRIPT_MANAGER_RUNTIME：运行时安装目录（配置项 runtime_dir，默认 exe 同级 runtime），
     /// 安装类脚本（Install-*.ps1）在未指定安装目录时以此为默认目标</item>
     /// </list>
     /// 值为绝对路径，脚本无需也不应依赖进程工作目录（提权时工作目录会被 ShellExecute 强制改为 System32）。

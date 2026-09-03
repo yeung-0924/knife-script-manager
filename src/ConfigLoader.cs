@@ -6,8 +6,8 @@ namespace ScriptManager;
 
 /// <summary>
 /// 负责定位脚本目录、读取并校验脚本索引 json（顶层为数组）。
-/// 脚本目录由 exe 同级的 config/config.ini 的 [script] path_script 配置（默认 script），
-/// 索引 json 固定为该目录下的 index.json；找不到则不加载目录树。
+/// 默认脚本索引文件由 exe 同级的 config/config.ini 的 [script] default_script_file 配置（默认 script\index.json），
+/// 用户可通过「打开」按钮加载其它位置的 index.json（持久化到 user_script_file）；找不到则不加载目录树。
 /// 脚本来源为单一目录，随 exe 分发、用户可编辑，不再内置进 exe。
 /// </summary>
 public static class ConfigLoader
@@ -15,7 +15,7 @@ public static class ConfigLoader
     /// <summary>脚本索引 json 的完整路径 = 脚本目录下的 index.json（来自配置，默认 exe 同级 script/index.json）。</summary>
     public static readonly string ScriptIndexJson = AppConfig.ScriptIndexJsonPath;
 
-    /// <summary>脚本所在目录（来自配置的 path_script，用于解析脚本相对路径与导出）。</summary>
+    /// <summary>脚本所在目录（由 default_script_file 推导，用于解析脚本相对路径与导出）。</summary>
     public static readonly string ScriptDir = AppConfig.ScriptDir;
 
     /// <summary>加载指定索引 json 路径的脚本列表，供 MVVM 构建树节点（文件不存在时返回空）。</summary>

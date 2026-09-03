@@ -1,10 +1,10 @@
 # 更新日志（Changelog）
 
 ## [Unreleased]
-- 脚本目录树工具条：移除「刷新」按钮；新增「打开」按钮（folder-open 图标），可弹出文件夹选择框加载任意脚本目录。
-  - 选中目录的根须含 `index.json`（结构同内置 `script` 目录）才会渲染目录树；不含该文件时目录树不渲染，且不弹窗报错。
-  - 打开后脚本路径相对所选目录解析，与内置 `script` 目录行为一致。
-  - 「打开」选择的脚本目录现持久化到 `config.ini` 的 `[script] open_dir`：重启应用后自动加载该目录（如该目录已失效则回退默认内置 `script` 目录），无需每次手动重新选择。
+- 配置键重新定义（[script] 节）：`script_path`→`default_script_file`（指向 index.json 文件，默认 `script\index.json`）、`lib_path`→`lib_dir`、`runtime_path`→`runtime_dir`、`cache_path`→`cache_dir`、`log`→`log_dir`；新增 `user_script_file`（记忆「打开」选择的索引文件）。旧键名不再读取，请按 `config.ini.example` 更新。
+- 脚本目录树工具条：移除「刷新」按钮；新增「打开」按钮（folder-open 图标）。
+  - 「打开」改为**直接选择脚本索引文件 `index.json`**（而非选目录），交互更明确；文件不存在/解析为空时目录树不渲染，且不弹窗报错。
+  - 选中有效 `index.json` 后写 `config.ini` 的 `[script] user_script_file`（绝对路径）；重启自动加载该文件（文件失效则回退 `default_script_file`），无需每次手动重新选择。
 
 ## [1.1.0]
 - 脚本执行超时自动终止：超过设定时长仍未结束则强杀进程树（RunResult.TimedOut）。

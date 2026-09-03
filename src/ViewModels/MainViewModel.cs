@@ -406,7 +406,7 @@ public class MainViewModel : ViewModelBase
         ResetParamsCommand = new RelayCommand(_ => ResetParams(), _ => SelectedScript != null);
         ClearLogCommand = new RelayCommand(_ => ClearLog(), _ => SelectedScript != null && Logs.Count > 0);
         ToggleExpandAllCommand = new RelayCommand(_ => ToggleExpandAll());
-        OpenFolderCommand = new RelayCommand(_ => OpenScriptFolder(), _ => !IsRunning);
+        OpenFolderCommand = new RelayCommand(_ => OpenScriptFile(), _ => !IsRunning);
     }
 
     private void CopyLog()
@@ -451,45 +451,49 @@ public class MainViewModel : ViewModelBase
     // 展开状态持久化到 cache/tree-state.json（见 TreeStateCache），不再存内存字典，故重启后仍可恢复
 
     /// <summary>
-    /// 解析启动时应加载的索引 json：优先用 config.ini 持久化的「打开」目录（[script] open_dir），
-    /// 仅当其确含 index.json 时才采用；否则回退到默认内置 script/index.json，保证重启后总有可用脚本树。
+    /// 解析启动时应加载的索引 json：优先用 config.ini 持久化的「打开」文件（[script] user_script_file），
+    /// 仅当该文件确实存在时才采用；否则回退到默认 default_script_file，保证重启后总有可用脚本树。
     /// </summary>
     private static string ResolveStartupIndex()
     {
-        var openDir = AppConfig.OpenScriptDir;
-        if (!string.IsNullOrEmpty(openDir))
-        {
-            var idx = Path.Combine(openDir, "index.json");
-            if (File.Exists(idx)) return idx;
-        }
+        var userIdx = AppConfig.UserScriptFilePath;
+        if (!string.IsNullOrEmpty(userIdx) && File.Exists(userIdx))
+            return userIdx;
         return ConfigLoader.ScriptIndexJson;
     }
 
     /// <summary>
-    /// 「打开」按钮：弹出文件夹选择框，加载用户选择的脚本目录（根目录须含 index.json，结构同内置 script 目录）。
-    /// 选中不含 index.json 的目录时，目录树渲染为空（符合「渲染不出来即可」的预期，不弹窗报错）。
+    /// 「打开」按钮：弹出文件选择框，直接选择脚本索引文件 index.json（结构同内置 script 目录的 index.json）。
+    /// 选中非有效脚本索引（解析为空）时，目录树渲染为空（符合「渲染不出来即可」的预期，不弹窗报错），且不记忆该选择。
     /// </summary>
-    private void OpenScriptFolder()
+    private void OpenScriptFile()
     {
-        // 初始定位到当前已加载索引所在目录，连续打开同类目录更顺手
-        var initialDir = Path.GetDirectoryName(_loadedIndexPath);
-        var picked = Utils.FolderPicker.PickFolder(Strings.DlgOpenFolderTitle, initialDir);
-        if (string.IsNullOrWhiteSpace(picked)) return; // 用户取消
-
-        var indexPath = Path.Combine(picked, "index.json");
-        if (!File.Exists(indexPath))
+        // 初始定位到当前已加载索引所在目录，连续打开同类文件更顺手
+        var dlg = new OpenFileDialog
         {
-            // 不是有效脚本目录：直接重建空树（BuildTreeFromIndex 对不存在的文件返回空，树不渲染），状态栏轻提示，不弹窗。
-            // 不持久化无效目录，保留上一次有效的 open_dir，避免重启后卡在空树。
-            LoadTreeFromIndex(indexPath);
-            ShowTemporaryStatus(Strings.StatusOpenFolderInvalid);
-            return;
-        }
+            Title = Strings.DlgOpenScriptFileTitle,
+            Filter = "脚本索引 (index.json)|index.json|JSON 文件 (*.json)|*.json|所有文件 (*.*)|*.*",
+            CheckFileExists = true
+        };
+        if (!string.IsNullOrWhiteSpace(_loadedIndexPath) && File.Exists(_loadedIndexPath))
+            dlg.InitialDirectory = Path.GetDirectoryName(_loadedIndexPath);
 
+        if (dlg.ShowDialog() != true) return; // 用户取消
+
+        var indexPath = dlg.FileName;
+        // 先校验是否为有效脚本索引（解析出节点）再决定是否记忆，避免把随机 json 记住导致重启后空树
+        var items = ConfigLoader.LoadIndex(indexPath);
         LoadTreeFromIndex(indexPath);
-        // 持久化到 config.ini 的 [script] open_dir，使重启后仍自动加载该目录
-        AppConfig.SetOpenScriptDir(picked);
-        ShowTemporaryStatus(Strings.StatusOpenFolderDone);
+        if (items.Count > 0)
+        {
+            // 持久化到 config.ini 的 [script] user_script_file，使重启后仍自动加载该索引文件
+            AppConfig.SetUserScriptFilePath(indexPath);
+            ShowTemporaryStatus(Strings.StatusOpenScriptFileDone);
+        }
+        else
+        {
+            ShowTemporaryStatus(Strings.StatusOpenScriptFileInvalid);
+        }
     }
 
     /// <summary>
