@@ -375,17 +375,9 @@ function Assemble-Dist {
         Write-Host "==> 已复制用户配置文件 -> $configDst (来源: $(Split-Path $configSrc -Leaf))"
     }
 
-    # 2.7) 文件夹图标库：assets/fColors.icl -> outDir/config/fColors.icl
-    #      供运行时在各标准目录生成的 desktop.ini 通过相对路径 ..\config\fColors.icl 引用，
-    #      使 config/log/cache/lib/runtime/script 等文件夹显示彩色图标（详见 src/FolderCustomizer.cs）。
-    $iconLib = Join-Path $rootDir "assets\fColors.icl"
-    if (Test-Path $iconLib) {
-        if (-not (Test-Path $configDir)) { New-Item -ItemType Directory -Path $configDir -Force | Out-Null }
-        Copy-Item $iconLib (Join-Path $configDir "fColors.icl") -Force
-        Write-Host "==> 已复制文件夹图标库 -> $(Join-Path $configDir 'fColors.icl')"
-    } else {
-        Write-Host "==> 警告：未找到 assets/fColors.icl，文件夹变色功能将不可用" -ForegroundColor Yellow
-    }
+    # 2.7) 文件夹图标库 fColors.icl 已内嵌进 exe（见 src/ScriptManager.csproj 的 EmbeddedResource），
+    #      运行期由 src/FolderCustomizer.cs 解压到 exe 同级（ExeDir\fColors.icl），不再落盘到 config\。
+    #      故此处无需复制；desktop.ini 由各标准目录运行时按内嵌模板生成，指向 ..\fColors.icl。
 
 }
 
@@ -424,7 +416,7 @@ if ($Edition -eq "Standard" -or $Edition -eq "Both") {
     Write-Host "    - $simpleDir    （依赖框架，需用户机器安装 .NET 运行时）"
 }
 Write-Host "    目录结构一致：ScriptManager.exe + script\ + lib\ + config\，与 exe 同级，用户可编辑。"
-Write-Host "    （cache\ 与 log\ 不打包，运行时由程序自动创建；config\fColors.icl 供文件夹变色功能引用）"
+Write-Host "    （cache\ 与 log\ 不打包，运行时由程序自动创建；fColors.icl 图标库已内嵌进 exe，运行期解压到 exe 同级供文件夹变色引用）"
 
 # 打包成功，清理可能残留的 error.log（若有），避免误导用户以为上次失败
 foreach ($d in @($portableDir, $simpleDir)) {

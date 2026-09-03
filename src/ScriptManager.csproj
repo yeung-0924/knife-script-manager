@@ -44,4 +44,14 @@
          移除 8.0.0 包以消除 NU1510 警告） -->
   </ItemGroup>
 
+  <!-- 文件夹变色资源：fColors.icl 图标库 + 三份 desktop.ini 模板，全部内嵌进 exe。
+       运行期由 src/FolderCustomizer.cs 解压 fColors.icl 到 exe 同级、并按模板生成各目录的 desktop.ini。
+       fColors.icl 非用户可编辑文件，内嵌最干净（不再落盘到 config\）。 -->
+  <ItemGroup>
+    <EmbeddedResource Include="..\assets\fColors.icl" LogicalName="assets.fColors.icl" />
+    <EmbeddedResource Include="..\assets\folder-icons\desktop.config.ini" LogicalName="assets.folder-icons.desktop.config.ini" />
+    <EmbeddedResource Include="..\assets\folder-icons\desktop.template6.ini" LogicalName="assets.folder-icons.desktop.template6.ini" />
+    <EmbeddedResource Include="..\assets\folder-icons\desktop.template8.ini" LogicalName="assets.folder-icons.desktop.template8.ini" />
+  </ItemGroup>
+
 </Project>
