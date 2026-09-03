@@ -66,6 +66,7 @@ public static class FolderCustomizer
                 Debug.WriteLine("FolderCustomizer: 未找到 " + IconLibPath + "，文件夹变色功能不可用（可忽略）");
                 return;
             }
+            EnsureIconLibHidden();
             foreach (var (dir, tpl, idx) in StandardDirs)
                 Ensure(dir, tpl, idx);
         }
@@ -118,6 +119,21 @@ public static class FolderCustomizer
         File.WriteAllBytes(iniPath, bytes);
         // desktop.ini 需 Hidden+System 属性才会被资源管理器当作文件夹定制文件
         File.SetAttributes(iniPath, FileAttributes.Hidden | FileAttributes.System);
+    }
+
+    // 让 exe 同级的 assets\fColors.icl 仅带 Hidden 属性（不显眼地躺在程序侧；不加 System，避免影响引用/删除）
+    private static void EnsureIconLibHidden()
+    {
+        try
+        {
+            var attr = File.GetAttributes(IconLibPath);
+            if ((attr & FileAttributes.Hidden) == 0)
+                File.SetAttributes(IconLibPath, attr | FileAttributes.Hidden);
+        }
+        catch (Exception ex)
+        {
+            Debug.WriteLine("FolderCustomizer 隐藏 fColors.icl 失败(可忽略): " + ex.Message);
+        }
     }
 
     // 容错读取模板：优先按 UTF-8（模板统一为 UTF-8 无 BOM）；若带 UTF-16 BOM 则按对应编码解码，
