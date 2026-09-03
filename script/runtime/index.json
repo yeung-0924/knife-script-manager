@@ -258,5 +258,49 @@
         "placeholder": "是否写入 SCRIPT_MANAGER_ENV 并加入 PATH"
       }
     ]
-  }
-]
+  },
+    {
+      "name": "安装 Powershell7 运行时环境",
+      "path": "./Install-Powershell7.ps1",
+      "lang": "powershell",
+      "admin": true,
+      "params": [
+        {
+          "name": "INSTALL_DIR",
+          "label": "安装目录",
+          "default": "",
+          "required": false,
+          "type": "folder",
+          "placeholder": "默认安装至程序 runtime 目录"
+        },
+        {
+          "name": "VERSION",
+          "label": "PowerShell 版本",
+          "default": "PowerShell 7.5",
+          "required": true,
+          "options": [
+            "PowerShell 7.5",
+            "PowerShell 7.4 (LTS)",
+            "PowerShell 7.2 (LTS)"
+          ],
+          "placeholder": "选择要安装的 PowerShell 7 大版本（LTS 版本支持更久）"
+        },
+        {
+          "name": "OVERWRITE",
+          "label": "覆盖原文件",
+          "default": "否",
+          "required": true,
+          "options": [ "是", "否" ],
+          "placeholder": "该版本 PowerShell 目录已存在时是否进行覆盖"
+        },
+        {
+          "name": "SET_PATH",
+          "label": "设置 PATH",
+          "default": "否",
+          "required": true,
+          "options": [ "是", "否" ],
+          "placeholder": "是否写入 SCRIPT_MANAGER_ENV 并加入 PATH"
+        }
+      ]
+    }
+  ]
