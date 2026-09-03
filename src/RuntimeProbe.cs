@@ -16,17 +16,18 @@ public static class RuntimeProbe
     // 各语言的探针命令 + 期望的版本号输出特征（首行非空时做 regex 匹配）
     private static readonly Dictionary<string, (string Args, Regex VersionPattern)> Probes = new(StringComparer.OrdinalIgnoreCase)
     {
-        [ScriptLangs.PowerShell] = ("-NoProfile -Command \"$PSVersionTable.PSVersion.ToString()\"", new Regex(@"\d+\.\d+", RegexOptions.Compiled)),
+        // 顺序遵循朝云约定：cmd → powershell → powershell7 → bash → java → nodejs → python → go → rust
         [ScriptLangs.Cmd]        = ("/c ver",                                                       new Regex(@"Windows.*\d+",   RegexOptions.Compiled)),
-        [ScriptLangs.Bash]       = ("--version",                                                    new Regex(@"\bGNU\b.*\b\d+\.\d+|\b\d+\.\d+.*\bbash\b", RegexOptions.Compiled | RegexOptions.IgnoreCase)),
-        [ScriptLangs.Node]       = ("--version",                                                    new Regex(@"v\d+\.\d+\.\d+",  RegexOptions.Compiled)),
-        [ScriptLangs.Python]     = ("--version",                                                    new Regex(@"Python\s*\d+\.\d+", RegexOptions.Compiled | RegexOptions.IgnoreCase)),
-        [ScriptLangs.Java]       = ("-version",                                                     new Regex(@"openjdk",          RegexOptions.Compiled | RegexOptions.IgnoreCase)),
-        [ScriptLangs.Go]         = ("version",                                                      new Regex(@"go\d+\.\d+",       RegexOptions.Compiled | RegexOptions.IgnoreCase)),
-        [ScriptLangs.Rust]       = ("--version",                                                    new Regex(@"rustc\s*\d+\.\d+", RegexOptions.Compiled | RegexOptions.IgnoreCase)),
+        [ScriptLangs.PowerShell] = ("-NoProfile -Command \"$PSVersionTable.PSVersion.ToString()\"", new Regex(@"\d+\.\d+", RegexOptions.Compiled)),
         // 必须校验主版本号 >= 6：Windows PowerShell 5.1 跑同一条命令会输出 "5.1.19041.xxx"，
         // 若沿用 powershell 的 \d+\.\d+ 正则会被误判为可用，使 pwsh 与 powershell 失去区分。
         [ScriptLangs.Pwsh]       = ("-NoProfile -Command \"$PSVersionTable.PSVersion.ToString()\"",  new Regex(@"^([6-9]|\d{2,})\.", RegexOptions.Compiled)),
+        [ScriptLangs.Bash]       = ("--version",                                                    new Regex(@"\bGNU\b.*\b\d+\.\d+|\b\d+\.\d+.*\bbash\b", RegexOptions.Compiled | RegexOptions.IgnoreCase)),
+        [ScriptLangs.Java]       = ("-version",                                                     new Regex(@"openjdk",          RegexOptions.Compiled | RegexOptions.IgnoreCase)),
+        [ScriptLangs.Node]       = ("--version",                                                    new Regex(@"v\d+\.\d+\.\d+",  RegexOptions.Compiled)),
+        [ScriptLangs.Python]     = ("--version",                                                    new Regex(@"Python\s*\d+\.\d+", RegexOptions.Compiled | RegexOptions.IgnoreCase)),
+        [ScriptLangs.Go]         = ("version",                                                      new Regex(@"go\d+\.\d+",       RegexOptions.Compiled | RegexOptions.IgnoreCase)),
+        [ScriptLangs.Rust]       = ("--version",                                                    new Regex(@"rustc\s*\d+\.\d+", RegexOptions.Compiled | RegexOptions.IgnoreCase)),
     };
 
     /// <summary>探测结果缓存：(lang, exePath) → (ok, version)。避免每次选中脚本都实跑子进程（冷启动可达秒级，会卡 UI）。</summary>

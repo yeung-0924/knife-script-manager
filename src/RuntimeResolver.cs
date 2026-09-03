@@ -24,16 +24,17 @@ public static class RuntimeResolver
         // cmd 模板需要 chcp 65001 防乱码，其他语言不串行包一层 shell
         var (fileName, arguments) = (lang ?? string.Empty).ToLowerInvariant() switch
         {
-            ScriptLangs.PowerShell => (runtime, $"-NoProfile -ExecutionPolicy Bypass -Command \"$enc=[System.Text.UTF8Encoding]::new($false);[Console]::OutputEncoding=$enc;[Console]::InputEncoding=$enc;& \\\"{scriptPath}\\\"{args};exit $LASTEXITCODE\""),
+            // 顺序遵循朝云约定：cmd → powershell → powershell7 → bash → java → nodejs → python → go → rust
             ScriptLangs.Cmd        => (runtime, $"/d /c \"chcp 65001 >nul && \"\"{scriptPath}\"\"{args}\""),
-            ScriptLangs.Python     => (runtime, $"\"{scriptPath}\"{args}"),
-            ScriptLangs.Java       => BuildJavaArgs(runtime, scriptPath, args),
-            ScriptLangs.Bash       => (runtime, $"\"{scriptPath}\"{args}"),
-            ScriptLangs.Node       => (runtime, $"\"{scriptPath}\"{args}"),
-            ScriptLangs.Go         => (runtime, $"run \"{scriptPath}\"{args}"),
+            ScriptLangs.PowerShell => (runtime, $"-NoProfile -ExecutionPolicy Bypass -Command \"$enc=[System.Text.UTF8Encoding]::new($false);[Console]::OutputEncoding=$enc;[Console]::InputEncoding=$enc;& \\\"{scriptPath}\\\"{args};exit $LASTEXITCODE\""),
             // pwsh（PowerShell 7）与 powershell 参数模板完全一致：
             // 均需 -ExecutionPolicy Bypass 绕过默认 Restricted，并在 -Command 内先切 UTF-8 再 dot-source 脚本。
             ScriptLangs.Pwsh       => (runtime, $"-NoProfile -ExecutionPolicy Bypass -Command \"$enc=[System.Text.UTF8Encoding]::new($false);[Console]::OutputEncoding=$enc;[Console]::InputEncoding=$enc;& \\\"{scriptPath}\\\"{args};exit $LASTEXITCODE\""),
+            ScriptLangs.Bash       => (runtime, $"\"{scriptPath}\"{args}"),
+            ScriptLangs.Java       => BuildJavaArgs(runtime, scriptPath, args),
+            ScriptLangs.Node       => (runtime, $"\"{scriptPath}\"{args}"),
+            ScriptLangs.Python     => (runtime, $"\"{scriptPath}\"{args}"),
+            ScriptLangs.Go         => (runtime, $"run \"{scriptPath}\"{args}"),
             // Rust 是编译型语言：脚本文件在调用前已由 MainViewModel 用 rustc 预编译为临时 exe，
             // 此处 scriptPath 即编译产物 exe，FileName 用 scriptPath 直接执行（runtime 仅作存在性校验用）。
             ScriptLangs.Rust       => BuildRustArgs(runtime, scriptPath, args),
@@ -158,6 +159,12 @@ public static class RuntimeResolver
     {
         switch ((lang ?? string.Empty).ToLowerInvariant())
         {
+            case ScriptLangs.Bash:
+                // git-bash 默认按系统 GBK(CP936) 输出到管道，需强制 UTF-8 locale。
+                // 用 C.UTF-8（Win10+ 自带、免安装中文 locale 即可生效），避免 zh_CN.UTF-8 未安装时 fallback 乱码。
+                startInfo.EnvironmentVariables["LANG"] = "C.UTF-8";
+                startInfo.EnvironmentVariables["LC_ALL"] = "C.UTF-8";
+                break;
             case ScriptLangs.Java:
                 // 单文件源码执行（JEP 330）按 -Dfile.encoding 读取源文件，固定 UTF-8。
                 // stdout/stderr 仍强制 UTF-8（sun.stdout/stderr.encoding），保证输出不乱码。
@@ -166,12 +173,6 @@ public static class RuntimeResolver
                 break;
             case ScriptLangs.Python:
                 startInfo.EnvironmentVariables["PYTHONIOENCODING"] = "utf-8";
-                break;
-            case ScriptLangs.Bash:
-                // git-bash 默认按系统 GBK(CP936) 输出到管道，需强制 UTF-8 locale。
-                // 用 C.UTF-8（Win10+ 自带、免安装中文 locale 即可生效），避免 zh_CN.UTF-8 未安装时 fallback 乱码。
-                startInfo.EnvironmentVariables["LANG"] = "C.UTF-8";
-                startInfo.EnvironmentVariables["LC_ALL"] = "C.UTF-8";
                 break;
         }
     }

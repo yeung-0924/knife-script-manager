@@ -47,17 +47,18 @@ public static class RuntimeConfig
     /// <summary>每个 lang 在自动检测时尝试的执行文件名候选（按顺序匹配）。</summary>
     private static readonly Dictionary<string, string[]> DefaultCandidates = new()
     {
-        [ScriptLangs.PowerShell] = new[] { "pwsh.exe", "powershell.exe" },
+        // 顺序遵循朝云约定：cmd → powershell → powershell7 → bash → java → nodejs → python → go → rust
         [ScriptLangs.Cmd]        = new[] { "cmd.exe" },
-        [ScriptLangs.Python]     = new[] { "python.exe", "python3.exe" },
-        [ScriptLangs.Java]       = new[] { "java.exe" },
-        [ScriptLangs.Bash]       = new[] { "bash.exe" },
-        [ScriptLangs.Node]       = new[] { "node.exe" },
-        [ScriptLangs.Go]         = new[] { "go.exe" },
-        [ScriptLangs.Rust]       = new[] { "rustc.exe", "cargo.exe" },
+        [ScriptLangs.PowerShell] = new[] { "pwsh.exe", "powershell.exe" },
         // 只认 pwsh.exe（PowerShell 6+），不回退到 powershell.exe——
         // 回退会让「指定 pwsh」退化成可能跑在 5.1 上，失去区分意义
-        [ScriptLangs.Pwsh]       = new[] { "pwsh.exe" }
+        [ScriptLangs.Pwsh]       = new[] { "pwsh.exe" },
+        [ScriptLangs.Bash]       = new[] { "bash.exe" },
+        [ScriptLangs.Java]       = new[] { "java.exe" },
+        [ScriptLangs.Node]       = new[] { "node.exe" },
+        [ScriptLangs.Python]     = new[] { "python.exe", "python3.exe" },
+        [ScriptLangs.Go]         = new[] { "go.exe" },
+        [ScriptLangs.Rust]       = new[] { "rustc.exe", "cargo.exe" }
     };
 
     /// <summary>优先用 PATH 找，再回退到 Windows 系统目录（System32 / SystemWOW64），都找不到返回 null。</summary>

@@ -11,19 +11,19 @@
     <ApplicationIcon>..\assets\images\app.ico</ApplicationIcon>
   </PropertyGroup>
 
-  <!-- 目录树图标：按 lang 切换（powershell/cmd/python/java/bash/node/go/rust），分组节点用 folder。
+  <!-- 目录树图标：按 lang 切换（cmd/powershell/pwsh/bash/java/node/python/go/rust，顺序遵循朝云约定），分组节点用 folder。
        语言图标存放于 assets/images/lang/，分组/应用图标存放于 assets/images/ -->
   <ItemGroup>
     <EmbeddedResource Include="..\assets\images\folder.ico" LogicalName="icons.folder.ico" />
-    <EmbeddedResource Include="..\assets\images\lang\powershell.ico" LogicalName="icons.powershell.ico" />
     <EmbeddedResource Include="..\assets\images\lang\cmd.ico" LogicalName="icons.cmd.ico" />
-    <EmbeddedResource Include="..\assets\images\lang\python.ico" LogicalName="icons.python.ico" />
-    <EmbeddedResource Include="..\assets\images\lang\java.ico" LogicalName="icons.java.ico" />
+    <EmbeddedResource Include="..\assets\images\lang\powershell.ico" LogicalName="icons.powershell.ico" />
+    <EmbeddedResource Include="..\assets\images\lang\pwsh.ico" LogicalName="icons.pwsh.ico" />
     <EmbeddedResource Include="..\assets\images\lang\bash.ico" LogicalName="icons.bash.ico" />
+    <EmbeddedResource Include="..\assets\images\lang\java.ico" LogicalName="icons.java.ico" />
     <EmbeddedResource Include="..\assets\images\lang\node.ico" LogicalName="icons.node.ico" />
+    <EmbeddedResource Include="..\assets\images\lang\python.ico" LogicalName="icons.python.ico" />
     <EmbeddedResource Include="..\assets\images\lang\go.ico" LogicalName="icons.go.ico" />
     <EmbeddedResource Include="..\assets\images\lang\rust.ico" LogicalName="icons.rust.ico" />
-    <EmbeddedResource Include="..\assets\images\lang\pwsh.ico" LogicalName="icons.pwsh.ico" />
   </ItemGroup>
 
   <ItemGroup>

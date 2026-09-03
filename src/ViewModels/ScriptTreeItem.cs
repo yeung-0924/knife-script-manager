@@ -74,15 +74,16 @@ public class ScriptTreeItem : ViewModelBase
             NodeKind.Group => "icons.folder.ico",
             NodeKind.Script => Item?.Lang?.ToLowerInvariant() switch
             {
-                ScriptLangs.PowerShell => "icons.powershell.ico",
+                // 顺序遵循朝云约定：cmd → powershell → powershell7 → bash → java → nodejs → python → go → rust
                 ScriptLangs.Cmd => "icons.cmd.ico",
-                ScriptLangs.Python => "icons.python.ico",
-                ScriptLangs.Java => "icons.java.ico",
+                ScriptLangs.PowerShell => "icons.powershell.ico",
+                ScriptLangs.Pwsh => "icons.pwsh.ico",
                 ScriptLangs.Bash => "icons.bash.ico",
+                ScriptLangs.Java => "icons.java.ico",
                 ScriptLangs.Node => "icons.node.ico",
+                ScriptLangs.Python => "icons.python.ico",
                 ScriptLangs.Go => "icons.go.ico",
                 ScriptLangs.Rust => "icons.rust.ico",
-                ScriptLangs.Pwsh => "icons.pwsh.ico",
                 _ => "icons.folder.ico"
             },
             _ => null

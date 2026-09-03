@@ -71,22 +71,24 @@ public class ScriptItem
 
 /// <summary>
 /// 脚本语言常量（对应 index.json 的 lang 字段值）。
-/// 目前支持：powershell / cmd / python / java / bash；新增语言在此登记，
+/// 语言固定顺序（朝云约定，凡需列举这些语言时均须遵循）：cmd(bat) → powershell → powershell7 → bash → java → nodejs → python → go → rust。
+/// 目前支持：cmd / powershell / pwsh / bash / java / node / python / go / rust；新增语言在此登记，
 /// 并在 Form1.ScriptIconIndex 补充对应树图标映射。
 /// </summary>
 public static class ScriptLangs
 {
-    public const string PowerShell = "powershell";
+    // 顺序遵循朝云约定：cmd(bat) → powershell → powershell7 → bash → java → nodejs → python → go → rust
     public const string Cmd = "cmd";
-    public const string Python = "python";
-    public const string Java = "java";
-    public const string Bash = "bash";
-    public const string Node = "node";
-    public const string Go = "go";
-    public const string Rust = "rust";
+    public const string PowerShell = "powershell";
     /// <summary>PowerShell 7+（pwsh.exe）。与 <see cref="PowerShell"/>（Windows PowerShell 5.1）区分：
     /// 后者候选为 pwsh.exe/powershell.exe 依次回退，此 lang 只认 PowerShell 6+ 的 pwsh.exe。</summary>
     public const string Pwsh = "pwsh";
+    public const string Bash = "bash";
+    public const string Java = "java";
+    public const string Node = "node";
+    public const string Python = "python";
+    public const string Go = "go";
+    public const string Rust = "rust";
 }
 
 /// <summary>
