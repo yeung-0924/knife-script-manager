@@ -8,7 +8,7 @@ public static class Strings
 {
     #region 版本号
     // 发版时在此修改；UI 右下角以 "v {Version}" 形式展示，常量写死，运行时不暴露给用户修改
-    public const string Version = "1.1.0";
+    public const string Version = "1.0.0";
     #endregion
 
     #region 标题（面板/分区）
