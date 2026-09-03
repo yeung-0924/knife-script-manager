@@ -2,6 +2,7 @@ using System;
 using System.Collections.Generic;
 using System.Diagnostics;
 using System.IO;
+using System.Text;
 
 namespace ScriptManager;
 
@@ -75,6 +76,97 @@ public static class AppConfig
 
     /// <summary>脚本索引 json 的完整路径 = 脚本目录下的 index.json（固定文件名）。找不到则 Load 返回空树。</summary>
     public static string ScriptIndexJsonPath => Path.Combine(ScriptDir, "index.json");
+
+    /// <summary>
+    /// 最近一次「打开」按钮选择并成功加载的脚本目录（绝对路径）。
+    /// 为空表示未持久化（或所选目录已被移除），启动时回退到默认内置 script 目录。
+    /// 仅用于记住用户选择，使重启后自动加载该目录；不影响其它配置项。
+    /// 相对路径按 exe 目录解析（与 script_path 一致），绝对路径（含 UNC）直接使用。
+    /// </summary>
+    public static string OpenScriptDir
+    {
+        get
+        {
+            var raw = GetValue("script", "open_dir")?.Trim();
+            if (string.IsNullOrWhiteSpace(raw)) return "";
+            return Path.IsPathRooted(raw) ? Path.GetFullPath(raw) : Path.Combine(ExeDir, raw);
+        }
+    }
+
+    /// <summary>
+    /// 运行时持久化「打开」选择的脚本目录到 config.ini 的 [script] open_dir。
+    /// 保留其它 section / key / 注释与顺序；文件或 [script] 节不存在则创建。
+    /// 同时更新内存缓存，使同进程内 OpenScriptDir 即时反映新值。写入失败仅记调试日志、不抛异常。
+    /// </summary>
+    public static void SetOpenScriptDir(string dir)
+    {
+        if (string.IsNullOrWhiteSpace(dir)) return;
+        try
+        {
+            var lines = File.Exists(ConfigPath)
+                ? new List<string>(File.ReadAllLines(ConfigPath))
+                : new List<string>();
+            const string sec = "script";
+            const string k = "open_dir";
+            var v = dir.Trim();
+
+            var secIdx = -1;
+            for (var i = 0; i < lines.Count; i++)
+            {
+                var t = lines[i].Trim();
+                if (t.StartsWith("[") && t.EndsWith("]") &&
+                    t.Substring(1, t.Length - 2).Trim().Equals(sec, StringComparison.OrdinalIgnoreCase))
+                {
+                    secIdx = i;
+                    break;
+                }
+            }
+
+            if (secIdx < 0)
+            {
+                // 整个 [script] 节都不存在：追加新节
+                if (lines.Count > 0 && lines[^1].Trim().Length > 0) lines.Add("");
+                lines.Add($"[{sec}]");
+                lines.Add($"{k}={v}");
+            }
+            else
+            {
+                // 在该节范围内查找 key（到下一个 [section] 为止）
+                var end = lines.Count;
+                for (var i = secIdx + 1; i < lines.Count; i++)
+                {
+                    var t = lines[i].Trim();
+                    if (t.StartsWith("[") && t.EndsWith("]")) { end = i; break; }
+                }
+                var keyIdx = -1;
+                for (var i = secIdx + 1; i < end; i++)
+                {
+                    var t = lines[i].Trim();
+                    if (t.Length == 0 || t.StartsWith(";") || t.StartsWith("#")) continue;
+                    var eq = t.IndexOf('=');
+                    if (eq >= 0 && t.Substring(0, eq).Trim().Equals(k, StringComparison.OrdinalIgnoreCase))
+                    {
+                        keyIdx = i;
+                        break;
+                    }
+                }
+                if (keyIdx >= 0) lines[keyIdx] = $"{k}={v}";
+                else lines.Insert(end, $"{k}={v}");
+            }
+
+            Directory.CreateDirectory(ConfigDir);
+            File.WriteAllLines(ConfigPath, lines, new UTF8Encoding(false));
+
+            // 同步内存缓存，使本进程内 OpenScriptDir 立即返回新值（该值仅启动时读取，仍保持一致性）
+            if (!Sections.ContainsKey(sec))
+                Sections[sec] = new Dictionary<string, string>(StringComparer.OrdinalIgnoreCase);
+            Sections[sec][k] = v;
+        }
+        catch (Exception ex)
+        {
+            Debug.WriteLine("写入 config.ini (open_dir) 失败: " + ex.Message);
+        }
+    }
 
     private static string? GetValue(string section, string key)
     {

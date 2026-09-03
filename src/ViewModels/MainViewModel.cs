@@ -390,7 +390,8 @@ public class MainViewModel : ViewModelBase
         _elapsedTimer.Tick += (_, _) => UpdateElapsedText();
 
         RuntimeConfig.EnsureAutoDetected();
-        LoadTreeFromIndex(ConfigLoader.ScriptIndexJson);
+        // 启动优先加载「打开」持久化的脚本目录；若该目录已失效（无 index.json）则回退到默认内置 script 目录
+        LoadTreeFromIndex(ResolveStartupIndex());
         RefreshRuntimeStatus();
 
         RunCommand = new RelayCommand(_ => ExecuteRun(false), _ => CanRun);
@@ -450,6 +451,21 @@ public class MainViewModel : ViewModelBase
     // 展开状态持久化到 cache/tree-state.json（见 TreeStateCache），不再存内存字典，故重启后仍可恢复
 
     /// <summary>
+    /// 解析启动时应加载的索引 json：优先用 config.ini 持久化的「打开」目录（[script] open_dir），
+    /// 仅当其确含 index.json 时才采用；否则回退到默认内置 script/index.json，保证重启后总有可用脚本树。
+    /// </summary>
+    private static string ResolveStartupIndex()
+    {
+        var openDir = AppConfig.OpenScriptDir;
+        if (!string.IsNullOrEmpty(openDir))
+        {
+            var idx = Path.Combine(openDir, "index.json");
+            if (File.Exists(idx)) return idx;
+        }
+        return ConfigLoader.ScriptIndexJson;
+    }
+
+    /// <summary>
     /// 「打开」按钮：弹出文件夹选择框，加载用户选择的脚本目录（根目录须含 index.json，结构同内置 script 目录）。
     /// 选中不含 index.json 的目录时，目录树渲染为空（符合「渲染不出来即可」的预期，不弹窗报错）。
     /// </summary>
@@ -463,13 +479,16 @@ public class MainViewModel : ViewModelBase
         var indexPath = Path.Combine(picked, "index.json");
         if (!File.Exists(indexPath))
         {
-            // 不是有效脚本目录：直接重建空树（BuildTreeFromIndex 对不存在的文件返回空，树不渲染），状态栏轻提示，不弹窗
+            // 不是有效脚本目录：直接重建空树（BuildTreeFromIndex 对不存在的文件返回空，树不渲染），状态栏轻提示，不弹窗。
+            // 不持久化无效目录，保留上一次有效的 open_dir，避免重启后卡在空树。
             LoadTreeFromIndex(indexPath);
             ShowTemporaryStatus(Strings.StatusOpenFolderInvalid);
             return;
         }
 
         LoadTreeFromIndex(indexPath);
+        // 持久化到 config.ini 的 [script] open_dir，使重启后仍自动加载该目录
+        AppConfig.SetOpenScriptDir(picked);
         ShowTemporaryStatus(Strings.StatusOpenFolderDone);
     }
 

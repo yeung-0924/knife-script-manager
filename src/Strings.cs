@@ -80,8 +80,8 @@ public static class Strings
     public const string StatusLogCleared = "已清空执行日志";
     public const string StatusParamsReset = "已重置为默认值";
     public const string StatusRuntimeAutoSet = "已按环境变量自动获取可执行文件";
-    // 「打开」脚本目录的反馈（状态栏轻提示，不弹窗）：成功加载 / 所选目录非有效脚本目录
-    public const string StatusOpenFolderDone = "已打开脚本目录";
+    // 「打开」脚本目录的反馈（状态栏轻提示，不弹窗）：成功加载并记住 / 所选目录非有效脚本目录
+    public const string StatusOpenFolderDone = "已打开脚本目录（已记住，重启后自动加载）";
     public const string StatusOpenFolderInvalid = "所选目录不是脚本目录（缺少 index.json）";
     public const string StatusRuntimeAutoFail = "环境中未检测到该语言的可执行文件，请配置环境变量或自行选择";
     #endregion
