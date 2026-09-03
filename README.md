@@ -17,6 +17,22 @@ knife-script-manager/
   build.ps1               # 一键构建脚本（生成 dist/）
 ```
 
+## 配置文件（可选）
+
+程序启动时会读取 exe 同级的 `config/config.ini`。**不提供也能正常运行**（全部使用默认值），配置文件仅用于自定义路径。
+
+可用的配置项（节名 `[script]`，全部可选，留空或整行注释即使用默认值）：
+
+| 键 | 含义 | 默认值 |
+|---|---|---|
+| `script_path` | 脚本目录 | `script` |
+| `lib_path` | 第三方依赖目录（注入环境变量 `SCRIPT_MANAGER_LIB`） | `lib` |
+| `runtime_path` | 运行时安装目录（注入环境变量 `SCRIPT_MANAGER_RUNTIME`） | `runtime` |
+| `cache_path` | 缓存目录 | `cache` |
+| `log` | 日志目录（如 `error.log`） | `log` |
+
+路径规则：相对路径相对 exe 目录解析；绝对路径（含 UNC 如 `\\Mac\Home\...`）直接使用。仓库提供了 `config.ini.example` 模板（含注释），复制为 `config/config.ini` 即可生效；修改后重启程序生效。
+
 ## 脚本来源（单一来源）
 
 exe 启动后只加载**一处**脚本：exe 同级的 `script/` 目录（含 `index.json` 与全部脚本）。目录树只渲染这一个来源，按 `group` 分组展示，不再区分"内置/自定义"。
@@ -30,25 +46,24 @@ exe 启动后只加载**一处**脚本：exe 同级的 `script/` 目录（含 `i
 ## 如何重新构建 exe
 
 ### 1. 需要 .NET 10 SDK
-开发机 SDK 路径：**`C:\Users\PC\dotnet10\dotnet.exe`**
-（若换机器，去 https://dot.net 装 .NET 10 SDK，然后用 `dotnet` 代替下面的路径）
+需安装 [.NET 10 SDK](https://dot.net)。安装后 `dotnet` 会加入系统 PATH，直接用它执行下方命令即可，无需指定安装路径。
 
 ### 2. 执行发布命令（一键脚本 build.ps1）
 项目根目录已提供 `build.ps1`，自动探测 dotnet 与架构、publish 到 `publish\`，再组装两个交付目录。三条命令：
 
 **构建便携版（自包含，内置 .NET，约 154MB，开箱即用）：**
 ```
-powershell -ExecutionPolicy Bypass -NoProfile -File "d:\Workspace\knife\knife-script-manager\build.ps1" -Edition Portable
+powershell -ExecutionPolicy Bypass -NoProfile -File .\build.ps1 -Edition Portable
 ```
 
 **构建标准版（依赖框架，不内置 .NET，需用户机器已装 .NET 10 运行时）：**
 ```
-powershell -ExecutionPolicy Bypass -NoProfile -File "d:\Workspace\knife\knife-script-manager\build.ps1" -Edition Standard
+powershell -ExecutionPolicy Bypass -NoProfile -File .\build.ps1 -Edition Standard
 ```
 
 **两者都构建（默认）：**
 ```
-powershell -ExecutionPolicy Bypass -NoProfile -File "d:\Workspace\knife\knife-script-manager\build.ps1"
+powershell -ExecutionPolicy Bypass -NoProfile -File .\build.ps1
 ```
 
 脚本会自动把 `ScriptManager.exe` 放入 `dist/ScriptManagerPortable/`（或 `dist/ScriptManager/`），并把 `script/` 与 `config/` 整体复制到对应目录（与 exe 同级，用户可编辑）。
@@ -64,13 +79,13 @@ powershell -ExecutionPolicy Bypass -NoProfile -File "d:\Workspace\knife\knife-sc
 
 **方式 B（手动命令）**：在 `src/` 目录下运行（便携版示例）：
 ```
-C:\Users\PC\dotnet10\dotnet.exe publish -c Release -r win-x64 --self-contained true -p:PublishSingleFile=true -p:IncludeNativeLibrariesForSelfExtract=true -o ..\publish
+dotnet publish -c Release -r win-x64 --self-contained true -p:PublishSingleFile=true -p:IncludeNativeLibrariesForSelfExtract=true -o ..\publish
 ```
 标准版把 `--self-contained true` 改为 `--self-contained false` 即可。发布成功后，把 `publish\ScriptManager.exe` 复制到 `dist\ScriptManagerPortable\`（或 `dist\ScriptManager\`），并把 `script/` 与 `config/` 复制过去。
 
 > 发布是耗时操作，前台可能被环境拦截。可改为异步执行：
 > ```
-> cmd /c start "" /min cmd /c "C:\Users\PC\dotnet10\dotnet.exe publish -c Release -r win-x64 --self-contained true -p:PublishSingleFile=true -p:IncludeNativeLibrariesForSelfExtract=true -o ..\publish > .tmp/_pub.log 2>&1"
+> cmd /c start "" /min cmd /c "dotnet publish -c Release -r win-x64 --self-contained true -p:PublishSingleFile=true -p:IncludeNativeLibrariesForSelfExtract=true -o ..\publish > .tmp/_pub.log 2>&1"
 > ```
 > 然后看 `.tmp/_pub.log` 是否出现 `ScriptManager -> ...\publish\`，完成后再把产物放入 `dist/`。
 

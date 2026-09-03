@@ -311,13 +311,19 @@ function Assemble-Dist {
     }
 
     # 3) 用户配置文件：config.ini -> outDir/config/config.ini
-    $configSrc = Join-Path $rootDir "config.ini"
+    #    优先用仓库根 config.ini；缺失时退化用 config.ini.example（含默认注释，确保交付包自带配置范本）
     $configDir = Join-Path $outDir "config"
     $configDst = Join-Path $configDir "config.ini"
-    if (Test-Path $configSrc) {
+    $configSrc = $null
+    if (Test-Path (Join-Path $rootDir "config.ini")) {
+        $configSrc = Join-Path $rootDir "config.ini"
+    } elseif (Test-Path (Join-Path $rootDir "config.ini.example")) {
+        $configSrc = Join-Path $rootDir "config.ini.example"
+    }
+    if ($configSrc) {
         if (-not (Test-Path $configDir)) { New-Item -ItemType Directory -Path $configDir -Force | Out-Null }
         Copy-Item $configSrc $configDst -Force
-        Write-Host "==> 已复制用户配置文件 -> $configDst"
+        Write-Host "==> 已复制用户配置文件 -> $configDst (来源: $(Split-Path $configSrc -Leaf))"
     }
 
 }

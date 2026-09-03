@@ -1,0 +1,14 @@
+# 统一行尾：检出为 CRLF（Windows 脚本 .bat/.cmd/.ps1 对 CRLF 最友好，避免 LF 在部分环境下失效）
+* text=auto eol=crlf
+
+# 二进制资源不转换
+*.png binary
+*.jpg binary
+*.jpeg binary
+*.gif binary
+*.ico binary
+*.svg text
+*.jar binary
+*.exe binary
+*.dll binary
+*.zip binary

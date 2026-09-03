@@ -1,0 +1,23 @@
+name: Bug 反馈
+description: 报告一个可复现的问题
+title: "[Bug] "
+labels: ["bug"]
+body:
+  - type: textarea
+    id: env
+    attributes:
+      label: 环境
+      description: Windows 版本、是否安装 .NET 10 运行时、使用便携版还是标准版
+    validations:
+      required: true
+  - type: textarea
+    id: steps
+    attributes:
+      label: 复现步骤
+    validations:
+      required: true
+  - type: textarea
+    id: log
+    attributes:
+      label: 错误日志
+      description: 贴出 log/error.log 相关内容（注意隐去私人路径）

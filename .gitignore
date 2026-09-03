@@ -19,3 +19,5 @@ Desktop.ini
 .vs/
 .idea/
 *.swp
+*.iml
+*.user
