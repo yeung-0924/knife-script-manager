@@ -13,3 +13,6 @@ runtime_path = runtime
 cache_path = cache
 ; 日志目录（默认：exe 同级 log，如 error.log）
 log = log
+; 脚本默认执行超时（秒）：0 或留空表示不限制（无限等待，默认）。
+; 单脚本可在 index.json 用 timeout 字段单独覆盖；两者皆未设则不超时。
+default_timeout = 0

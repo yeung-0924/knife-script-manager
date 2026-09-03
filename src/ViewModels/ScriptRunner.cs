@@ -13,7 +13,11 @@ namespace ScriptManager.ViewModels;
 /// </summary>
 public class ScriptRunner
 {
-    public record RunResult(int ExitCode);
+    public record RunResult(int ExitCode)
+    {
+        /// <summary>是否因超时自动终止。true 时 ExitCode 不可靠（进程被强杀）。</summary>
+        public bool TimedOut { get; init; }
+    }
 
     // 当前正在运行的进程句柄，供 Stop 终止（单次仅一个，应用为串行执行）。
     private static readonly object _currentLock = new();
@@ -41,7 +45,8 @@ public class ScriptRunner
         bool admin,
         Action<LogEntry.Level, string> onLog,
         string? scriptOverridePath = null,
-        IReadOnlyDictionary<string, string>? injectedVars = null)
+        IReadOnlyDictionary<string, string>? injectedVars = null,
+        int timeoutSeconds = 0)
     {
         var scriptPath = scriptOverridePath ?? script.ResolvedPath;
         var startInfo = RuntimeResolver.Build(script.Lang, scriptPath, combinedArgs, workingDir, injectedVars);
@@ -57,7 +62,7 @@ public class ScriptRunner
             if (admin)
             {
                 // 管理员提权：需 UseShellExecute=true 才能触发 UAC；此时无法重定向输出，改为临时落盘并轮询读回
-                return RunElevated(script, combinedArgs, workingDir, onLog, scriptPath, injectedVars);
+                return RunElevated(script, combinedArgs, workingDir, onLog, scriptPath, injectedVars, timeoutSeconds);
             }
 
             proc.Start();
@@ -74,7 +79,25 @@ public class ScriptRunner
             };
             proc.BeginOutputReadLine();
             proc.BeginErrorReadLine();
-            proc.WaitForExit();
+
+            // 超时控制：>0 时用 WaitForExit(timeout) 限时等待；超时未退出则强杀进程树并标记 TimedOut。
+            // 0/负数表示不限制（无限等待），保留原行为。
+            if (timeoutSeconds > 0)
+            {
+                if (!proc.WaitForExit(timeoutSeconds * 1000))
+                {
+                    onLog(LogEntry.Level.Error, string.Format(Strings.LogTimeoutFormat, timeoutSeconds));
+                    Stop(); // 杀掉进程树（含子进程）
+                    lock (_currentLock) { _current = null; }
+                    onLog(LogEntry.Level.Exit, string.Format(Strings.LogProcessExitFormat, -1));
+                    return new RunResult(-1) { TimedOut = true };
+                }
+            }
+            else
+            {
+                proc.WaitForExit();
+            }
+
             var code = proc.ExitCode;
             lock (_currentLock) { _current = null; }
             onLog(LogEntry.Level.Exit, string.Format(Strings.LogProcessExitFormat, code));
@@ -95,7 +118,8 @@ public class ScriptRunner
     /// </summary>
     private static RunResult RunElevated(
         ScriptItem script, string combinedArgs, string workingDir, Action<LogEntry.Level, string> onLog,
-        string? scriptOverridePath = null, IReadOnlyDictionary<string, string>? injectedVars = null)
+        string? scriptOverridePath = null, IReadOnlyDictionary<string, string>? injectedVars = null,
+        int timeoutSeconds = 0)
     {
         var scriptPath = scriptOverridePath ?? script.ResolvedPath;
         var tempBat = Path.Combine(Path.GetTempPath(), $"se_admin_{Guid.NewGuid():N}.bat");
@@ -137,8 +161,18 @@ public class ScriptRunner
             using (var logStream = new FileStream(logFile, FileMode.OpenOrCreate, FileAccess.Read, FileShare.ReadWrite | FileShare.Delete))
             using (var logReader = new StreamReader(logStream, Encoding.UTF8))
             {
-                while (!proc.HasExited || logReader.Peek() != -1)
+                var sw = Stopwatch.StartNew();
+                while (true)
                 {
+                    // 超时控制：>0 时超过 timeoutSeconds 仍未退出则强杀进程树并标记 TimedOut。
+                    if (timeoutSeconds > 0 && !proc.HasExited && sw.Elapsed.TotalSeconds >= timeoutSeconds)
+                    {
+                        onLog(LogEntry.Level.Error, string.Format(Strings.LogTimeoutFormat, timeoutSeconds));
+                        Stop(); // 杀掉提权进程树（临时 bat + 子进程）
+                        lock (_currentLock) { _current = null; }
+                        return new RunResult(-1) { TimedOut = true };
+                    }
+                    if (proc.HasExited && logReader.Peek() == -1) break;
                     var line = logReader.ReadLine();
                     if (line == null)
                     {

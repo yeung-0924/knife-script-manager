@@ -119,6 +119,7 @@ dotnet publish -c Release -r win-x64 --self-contained true -p:PublishSingleFile=
         "hide": false,          // 布尔，true 则隐藏不显示
         "lang": "powershell",   // 脚本语言：powershell/pwsh/cmd/python/java/bash/node/go/rust，决定目录树图标
         "admin": false,          // 布尔，true 则以管理员身份运行
+        "timeout": 0,            // 可选，执行超时（秒）；>0 时超时自动终止进程树，0/留空=不限制（回退全局 default_timeout）
         "params": [             // 可选，参数声明（UI 据此生成输入控件）
           { "name": "PORT", "label": "端口号", "default": "8080", "required": true, "placeholder": "如 8080" },
           { "name": "PROTOCOL", "label": "协议", "default": "TCP", "options": ["TCP","UDP"] }

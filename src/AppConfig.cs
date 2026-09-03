@@ -59,6 +59,20 @@ public static class AppConfig
     /// <summary>日志文件目录（来自配置的 log，默认 exe 同级 log）。</summary>
     public static string LogDir => ResolveDir("script", "log", "log");
 
+    /// <summary>
+    /// 脚本默认执行超时（秒）。0 或负数表示不限制（无限等待，默认）。
+    /// 单脚本可在 index.json 用 <c>timeout</c> 字段单独覆盖；两者皆未设则不超时。
+    /// 修改后重启程序生效。
+    /// </summary>
+    public static int DefaultTimeoutSeconds
+    {
+        get
+        {
+            var raw = GetValue("script", "default_timeout");
+            return int.TryParse(raw, out var v) ? v : 0;
+        }
+    }
+
     /// <summary>脚本索引 json 的完整路径 = 脚本目录下的 index.json（固定文件名）。找不到则 Load 返回空树。</summary>
     public static string ScriptIndexJsonPath => Path.Combine(ScriptDir, "index.json");
 

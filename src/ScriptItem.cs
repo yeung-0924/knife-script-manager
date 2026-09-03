@@ -50,6 +50,14 @@ public class ScriptItem
     public bool Admin { get; set; }
 
     /// <summary>
+    /// 执行超时（秒，可选）。超过该时长仍未结束则自动终止（杀掉进程树）。
+    /// 为空（未声明）时回退到全局默认 <c>config.ini</c> 的 <c>default_timeout</c>；
+    /// 两者均未设或值为 0/负数，则不限制（无限等待）。
+    /// </summary>
+    [System.Text.Json.Serialization.JsonPropertyName("timeout")]
+    public int? Timeout { get; set; }
+
+    /// <summary>
     /// 参数声明列表（来自 index.json 的 params）。为空表示脚本不需要参数。
     /// UI 会据此动态生成输入框，并把用户输入拼成 -key value 形式传给脚本。
     /// </summary>

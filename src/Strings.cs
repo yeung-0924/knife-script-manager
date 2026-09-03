@@ -8,7 +8,7 @@ public static class Strings
 {
     #region 版本号
     // 发版时在此修改；UI 右下角以 "v {Version}" 形式展示，常量写死，运行时不暴露给用户修改
-    public const string Version = "1.0.0";
+    public const string Version = "1.1.0";
     #endregion
 
     #region 标题（面板/分区）
@@ -43,6 +43,8 @@ public static class Strings
     public const string StatusCompletedFormat = "完成：{0}（退出码 0）";
     public const string StatusExitedFormat = "结束：{0}（退出码 {1}）";
     public const string StatusExceptionFormat = "执行异常：{0}";
+    // 执行超时（{0} = 脚本名）：自动终止后的状态栏提示
+    public const string StatusTimeoutFormat = "执行超时，已终止：{0}";
     public const string StatusStopping = "正在停止…";
     // 可执行文件版本校验进行中（覆盖 StatusText 显示）
     public const string StatusRuntimeChecking = "可执行文件检测中…";
@@ -115,6 +117,8 @@ public static class Strings
     public const string LogProcessStartAdminFormat = "── 开始执行（管理员权限）──";
     public const string LogProcessExitFormat = "── 结束执行（退出码 {0}）──";
     public const string LogExecExceptionFormat = "✗ 执行异常：{0}";
+    // 执行超时（{0} = 超时秒数）：自动终止进程树
+    public const string LogTimeoutFormat = "✗ 执行超时（{0} 秒），已自动终止进程";
     public const string LogElevatedFailFormat = "✗ 提权执行失败：{0}";
     #endregion
 }

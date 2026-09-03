@@ -1013,8 +1013,10 @@ public class MainViewModel : ViewModelBase
         {
             // 放到后台线程执行，避免 proc.WaitForExit 阻塞 UI 线程导致界面卡死
             var session = _runSession;
+            // 有效超时：单脚本 timeout 优先，回退全局 default_timeout（0/负=不限制）
+            var timeout = script.Timeout ?? AppConfig.DefaultTimeoutSeconds;
             OnLog(session, LogEntry.Level.Exit, script.Admin ? Strings.LogProcessStartAdminFormat : Strings.LogProcessStartFormat);
-            var result = await Task.Run(() => ScriptRunner.Run(script, "", workingDir, script.Admin, (lv, tx) => OnLog(session, lv, tx), scriptOverride, injectedVars));
+            var result = await Task.Run(() => ScriptRunner.Run(script, "", workingDir, script.Admin, (lv, tx) => OnLog(session, lv, tx), scriptOverride, injectedVars, timeout));
             // 耗时定格为「总用时」，与执行中同样的位置与样式继续显示
             StopAndShowTotalElapsed();
             if (_stopRequested)
@@ -1022,6 +1024,8 @@ public class MainViewModel : ViewModelBase
                 ShowTemporaryStatus(string.Format(Strings.StatusStoppedFormat, script.Name));
                 _stopRequested = false;
             }
+            else if (result.TimedOut)
+                ShowTemporaryStatus(string.Format(Strings.StatusTimeoutFormat, script.Name));
             else if (result.ExitCode == 0)
                 ShowTemporaryStatus(string.Format(Strings.StatusCompletedFormat, script.Name));
             else
