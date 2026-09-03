@@ -21,8 +21,8 @@ public static class Strings
 
     #region 按钮
     public const string BtnExport = "导出";
+    public const string BtnOpen = "打开";
     public const string BtnSave = "保存";
-    public const string BtnRefresh = "刷新";
     public const string BtnReset = "重置";
     public const string BtnCopy = "复制";
     public const string BtnSettings = "配置";
@@ -76,11 +76,13 @@ public static class Strings
     #endregion
 
     #region 操作反馈（临时提示，数秒后自动恢复为就绪态）
-    public const string StatusReloaded = "已刷新脚本列表";
-    public const string StatusReloadedEnv = "已刷新脚本列表与环境变量";
+    // StatusReloaded / StatusReloadedEnv：原「刷新」按钮提示，刷新功能下线后已废弃（保留作清理记录）。
     public const string StatusLogCleared = "已清空执行日志";
     public const string StatusParamsReset = "已重置为默认值";
     public const string StatusRuntimeAutoSet = "已按环境变量自动获取可执行文件";
+    // 「打开」脚本目录的反馈（状态栏轻提示，不弹窗）：成功加载 / 所选目录非有效脚本目录
+    public const string StatusOpenFolderDone = "已打开脚本目录";
+    public const string StatusOpenFolderInvalid = "所选目录不是脚本目录（缺少 index.json）";
     public const string StatusRuntimeAutoFail = "环境中未检测到该语言的可执行文件，请配置环境变量或自行选择";
     #endregion
 
@@ -106,6 +108,7 @@ public static class Strings
     public const string DlgExportDirTitle = "选择导出目录";
     public const string DlgExportScriptFilter = "脚本文件|*.*";
     public const string DlgExportScriptDonePrefix = "导出的脚本已保存到：";
+    public const string DlgOpenFolderTitle = "选择脚本目录";
     #endregion
 
     #region 执行日志（输出到日志面板与 log/ 文件，用户可见）

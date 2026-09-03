@@ -113,18 +113,6 @@
                             </Button>
                             <Button DockPanel.Dock="Right"
                                     Style="{StaticResource BaseButtonLight}"
-                                    Command="{Binding ReloadCommand}"
-                                    IsEnabled="{Binding IsRunning, Converter={x:Static local:InverseBoolConverter.Instance}}"
-                                    Width="24" Height="24" Padding="0"
-                                    Margin="0,0,3,0"
-                                    ToolTip="{x:Static local:Strings.BtnRefresh}"
-                                    HorizontalAlignment="Right" VerticalAlignment="Center">
-                                <svgc:SvgViewbox Width="13" Height="13"
-                                                 UriSource='pack://application:,,,/assets/images/button/refresh-ccw.svg'
-                                                 HorizontalAlignment="Center" VerticalAlignment="Center" />
-                            </Button>
-                            <Button DockPanel.Dock="Right"
-                                    Style="{StaticResource BaseButtonLight}"
                                     Command="{Binding ExportCommand}"
                                     IsEnabled="{Binding IsRunning, Converter={x:Static local:InverseBoolConverter.Instance}}"
                                     Width="24" Height="24" Padding="0"
@@ -133,6 +121,18 @@
                                     HorizontalAlignment="Right" VerticalAlignment="Center">
                                 <svgc:SvgViewbox Width="13" Height="13"
                                                  UriSource='pack://application:,,,/assets/images/button/download.svg'
+                                                 HorizontalAlignment="Center" VerticalAlignment="Center" />
+                            </Button>
+                            <Button DockPanel.Dock="Right"
+                                    Style="{StaticResource BaseButtonLight}"
+                                    Command="{Binding OpenFolderCommand}"
+                                    IsEnabled="{Binding IsRunning, Converter={x:Static local:InverseBoolConverter.Instance}}"
+                                    Width="24" Height="24" Padding="0"
+                                    Margin="0,0,3,0"
+                                    ToolTip="{x:Static local:Strings.BtnOpen}"
+                                    HorizontalAlignment="Right" VerticalAlignment="Center">
+                                <svgc:SvgViewbox Width="13" Height="13"
+                                                 UriSource='pack://application:,,,/assets/images/button/folder-open.svg'
                                                  HorizontalAlignment="Center" VerticalAlignment="Center" />
                             </Button>
                             <TextBlock Text="{x:Static local:Strings.TitleScriptList}" Style="{StaticResource TitleText}" VerticalAlignment="Center" />

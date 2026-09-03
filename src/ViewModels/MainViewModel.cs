@@ -26,9 +26,11 @@ public class MainViewModel : ViewModelBase
 {
     #region 常量与路径
     private static readonly string ExeDir = AppContext.BaseDirectory;
-    private static readonly string IndexPath = ConfigLoader.ScriptIndexJson;
     private const double TopRegionHeight = 400;
     #endregion
+
+    /// <summary>当前加载的脚本索引 json 路径：默认内置 script/index.json；通过「打开」按钮可切换为任意脚本目录。</summary>
+    private string _loadedIndexPath = ConfigLoader.ScriptIndexJson;
 
     #region 按脚本路径缓存的运行态（参数值 + 日志）
     // 切换脚本时保留各自的填写参数与控制台日志，再次切回即恢复；进程退出字典销毁 → 重进自动清空
@@ -367,10 +369,10 @@ public class MainViewModel : ViewModelBase
     public RelayCommand ExportPreviewCommand { get; }
     public RelayCommand StopCommand { get; }
     public RelayCommand ResetParamsCommand { get; }
-    public RelayCommand ReloadCommand { get; }
     public RelayCommand ClearLogCommand { get; }
     public RelayCommand CopyLogCommand { get; }
     public RelayCommand ToggleExpandAllCommand { get; }
+    public RelayCommand OpenFolderCommand { get; }
     #endregion
 
     public MainViewModel()
@@ -388,7 +390,7 @@ public class MainViewModel : ViewModelBase
         _elapsedTimer.Tick += (_, _) => UpdateElapsedText();
 
         RuntimeConfig.EnsureAutoDetected();
-        BuildTree(saveCurrent: false);
+        LoadTreeFromIndex(ConfigLoader.ScriptIndexJson);
         RefreshRuntimeStatus();
 
         RunCommand = new RelayCommand(_ => ExecuteRun(false), _ => CanRun);
@@ -401,9 +403,9 @@ public class MainViewModel : ViewModelBase
         StopCommand = new RelayCommand(_ => StopRunning(), _ => IsRunning);
         CopyLogCommand = new RelayCommand(_ => CopyLog(), _ => SelectedScript != null && Logs.Count > 0);
         ResetParamsCommand = new RelayCommand(_ => ResetParams(), _ => SelectedScript != null);
-        ReloadCommand = new RelayCommand(_ => Reload());
         ClearLogCommand = new RelayCommand(_ => ClearLog(), _ => SelectedScript != null && Logs.Count > 0);
         ToggleExpandAllCommand = new RelayCommand(_ => ToggleExpandAll());
+        OpenFolderCommand = new RelayCommand(_ => OpenScriptFolder(), _ => !IsRunning);
     }
 
     private void CopyLog()
@@ -447,27 +449,41 @@ public class MainViewModel : ViewModelBase
     // 刷新时保留各节点的展开/折叠状态（按稳定 Path 匹配）
     // 展开状态持久化到 cache/tree-state.json（见 TreeStateCache），不再存内存字典，故重启后仍可恢复
 
-    private void Reload()
+    /// <summary>
+    /// 「打开」按钮：弹出文件夹选择框，加载用户选择的脚本目录（根目录须含 index.json，结构同内置 script 目录）。
+    /// 选中不含 index.json 的目录时，目录树渲染为空（符合「渲染不出来即可」的预期，不弹窗报错）。
+    /// </summary>
+    private void OpenScriptFolder()
     {
-        // 先从注册表（Machine+User）重新加载环境变量到当前进程并作废版本探测缓存，
-        // 使安装脚本（如 JDK）写入的新 PATH/JAVA_HOME 无需重启工具即可生效
-        EnvironmentSync.RefreshProcessEnvironment();
-        RuntimeProbe.ClearCache();
+        // 初始定位到当前已加载索引所在目录，连续打开同类目录更顺手
+        var initialDir = Path.GetDirectoryName(_loadedIndexPath);
+        var picked = Utils.FolderPicker.PickFolder(Strings.DlgOpenFolderTitle, initialDir);
+        if (string.IsNullOrWhiteSpace(picked)) return; // 用户取消
 
-        // 刷新即重置当前选中脚本与可执行文件状态，回到未选状态（可执行文件路径输入框清空、运行按钮置灰）
-        OnScriptSelected(null);
-        BuildTree(saveCurrent: true);
-        // 注意：OnScriptSelected(null) 会 SetBaseStatus(就绪) 并停掉定时器，故此提示须在其后设置才会生效
-        ShowTemporaryStatus(Strings.StatusReloadedEnv);
+        var indexPath = Path.Combine(picked, "index.json");
+        if (!File.Exists(indexPath))
+        {
+            // 不是有效脚本目录：直接重建空树（BuildTreeFromIndex 对不存在的文件返回空，树不渲染），状态栏轻提示，不弹窗
+            LoadTreeFromIndex(indexPath);
+            ShowTemporaryStatus(Strings.StatusOpenFolderInvalid);
+            return;
+        }
+
+        LoadTreeFromIndex(indexPath);
+        ShowTemporaryStatus(Strings.StatusOpenFolderDone);
     }
 
-    private void BuildTree(bool saveCurrent = false)
+    /// <summary>
+    /// 从指定索引 json 重建脚本目录树（不写展开状态缓存——跨目录的恢复无意义）。
+    /// 索引文件不存在时 <see cref="BuildTreeFromIndex"/> 返回空集合，目录树保持不渲染。
+    /// </summary>
+    private void LoadTreeFromIndex(string indexPath)
     {
-        // 首次构造（saveCurrent=false）不写盘，保留用户真实展开状态作为缓存（而非初始空集合）；
-        // Reload（saveCurrent=true）先保存当前展开状态，重建后再还原，刷新时不丢失。
-        if (saveCurrent) SaveExpandedState(ScriptTree);
+        _loadedIndexPath = indexPath;
+        // 切换目录前重置当前选中（参数/日志/预览缓存各自按原路径保留，互不影响）
+        OnScriptSelected(null);
         var roots = new ObservableCollection<ScriptTreeItem>();
-        BuildTreeFromIndex(roots, IndexPath);
+        BuildTreeFromIndex(roots, indexPath);
         ScriptTree = roots;
         RestoreExpandedState(ScriptTree);
         WireTreeNotifications();
