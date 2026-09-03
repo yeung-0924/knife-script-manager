@@ -375,9 +375,32 @@ function Assemble-Dist {
         Write-Host "==> 已复制用户配置文件 -> $configDst (来源: $(Split-Path $configSrc -Leaf))"
     }
 
-    # 2.7) 文件夹图标库 fColors.icl 已内嵌进 exe（见 src/ScriptManager.csproj 的 EmbeddedResource），
-    #      运行期由 src/FolderCustomizer.cs 解压到 exe 同级（ExeDir\fColors.icl），不再落盘到 config\。
-    #      故此处无需复制；desktop.ini 由各标准目录运行时按内嵌模板生成，指向 ..\fColors.icl。
+    # 2.7) 文件夹变色资源：assets/fColors.icl + assets/folder-icons/*.ini
+    #      -> outDir/assets/（与 exe 同级，不进 config\ 用户可编辑区）。
+    #      运行期由 src/FolderCustomizer.cs 从 ExeDir\assets\ 读取并生成各目录的 desktop.ini（指向 ..\assets\fColors.icl）。
+    $assetsSrc = Join-Path $rootDir "assets"
+    $assetsDst = Join-Path $outDir "assets"
+    if (Test-Path $assetsSrc) {
+        if (-not (Test-Path $assetsDst)) { New-Item -ItemType Directory -Path $assetsDst -Force | Out-Null }
+        # 仅复制文件夹变色相关文件：fColors.icl + folder-icons/ 下的模板；
+        # 其余 assets（images 等）已内嵌进 exe，不复制。
+        $iconLib = Join-Path $assetsSrc "fColors.icl"
+        if (Test-Path $iconLib) {
+            Copy-Item $iconLib (Join-Path $assetsDst "fColors.icl") -Force
+            Write-Host "==> 已复制文件夹图标库 -> $(Join-Path $assetsDst 'fColors.icl')"
+        } else {
+            Write-Host "==> 警告：未找到 assets\fColors.icl，文件夹变色功能将不可用" -ForegroundColor Yellow
+        }
+        $tplSrc = Join-Path $assetsSrc "folder-icons"
+        if (Test-Path $tplSrc) {
+            $tplDst = Join-Path $assetsDst "folder-icons"
+            if (-not (Test-Path $tplDst)) { New-Item -ItemType Directory -Path $tplDst -Force | Out-Null }
+            Copy-Item (Join-Path $tplSrc "*.ini") $tplDst -Force
+            Write-Host "==> 已复制 desktop.ini 模板 -> $tplDst"
+        }
+    } else {
+        Write-Host "==> 警告：未找到 assets/，文件夹变色功能将不可用" -ForegroundColor Yellow
+    }
 
 }
 
@@ -416,7 +439,7 @@ if ($Edition -eq "Standard" -or $Edition -eq "Both") {
     Write-Host "    - $simpleDir    （依赖框架，需用户机器安装 .NET 运行时）"
 }
 Write-Host "    目录结构一致：ScriptManager.exe + script\ + lib\ + config\，与 exe 同级，用户可编辑。"
-Write-Host "    （cache\ 与 log\ 不打包，运行时由程序自动创建；fColors.icl 图标库已内嵌进 exe，运行期解压到 exe 同级供文件夹变色引用）"
+Write-Host "    （cache\ 与 log\ 不打包，运行时由程序自动创建；fColors.icl 图标库与 desktop.ini 模板随构建放入 exe 同级的 assets\，运行期引用）"
 
 # 打包成功，清理可能残留的 error.log（若有），避免误导用户以为上次失败
 foreach ($d in @($portableDir, $simpleDir)) {
