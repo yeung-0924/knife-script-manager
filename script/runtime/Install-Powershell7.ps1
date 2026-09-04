@@ -1,4 +1,4 @@
-# 更新时间: 2026-09-04 17:58:01
+# 更新时间: 2026-09-04 18:16:34
 # Install-Powershell7.ps1 - 安装 PowerShell 7（含 pwsh.exe）
 #   下载源（DOWNLOAD_SOURCE）：
 #     Microsoft = 通过 WinGet（Microsoft.PowerShell）从微软官方渠道安装（默认，二进制来自微软 CDN，系统级目录）
@@ -103,7 +103,7 @@ if ([string]::IsNullOrWhiteSpace($Overwrite))      { $Overwrite = '否' }
 if ([string]::IsNullOrWhiteSpace($AddToPath))      { $AddToPath = '是' }
 
 Say '=========================================='
-Say ' 自动安装 PowerShell 7'
+Say ' 安装 Powershell7 运行时环境'
 Say '=========================================='
 # ---- 控制台同步打印「更新时间」：从脚本头部注释读取，便于用户贴错误日志时直接看到脚本版本时间 ----
 $updateTime = ''
@@ -436,7 +436,7 @@ if ([string]::IsNullOrWhiteSpace($pwshHome)) {
     if ($DownloadSource -ieq 'Microsoft') {
         SayC $RED '失败' "PowerShell $major 安装失败（下载源=Microsoft / WinGet）：未得到可用的 pwsh.exe"
         SayC $YELLOW '原因' "常见原因：① 本机未安装「应用安装程序(App Installer)」，找不到 winget.exe；② 安全策略/组策略拦截了 WinGet 安装；③ WinGet 装到了非系统目录导致未能定位"
-        SayC $YELLOW '建议' "请确认已安装 App Installer 且可联网后重试；或直接把「下载源」改为 GitHub 再安装"
+        SayC $YELLOW '建议' "请确认已安装 App Installer 且可联网后重试；或切换其他下载源"
     } else {
         SayC $RED '失败' "PowerShell $major 安装失败（下载源=GitHub）：下载或解压未能产出可用的 pwsh.exe"
         SayC $YELLOW '原因' "常见原因：① 网络不可达 GitHub（受限网络常被墙）；② 临时目录/安装目录无写入权限；③ 磁盘空间不足"

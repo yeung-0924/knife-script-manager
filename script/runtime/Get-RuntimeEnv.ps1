@@ -1,10 +1,12 @@
-# 更新时间: 2026-09-04 16:57:08
+# 更新时间: 2026-09-04 18:16:34
 # Get-RuntimeEnv.ps1 - 检测本机各语言运行时版本与可执行文件路径（未配置环境的语言输出为空）
 # 说明（关键健壮性处理）：
 #   1) 统一用 Write-Output 输出（走 success stream / stdout），与 Get-SystemInfo.ps1 同款处理。
 #   2) 外部命令的版本输出可能走 stderr（java -version 等），一律 2>&1 合并后取首行。
 #   3) 命令不存在、执行失败（如 Windows 商店版 python stub）一律视为"未配置"，版本输出为空。
 #   4) 检测属于只读操作，任何单项失败都不应中断整体输出。
+#   5) 逐语言「检测中 -> 结果」流式输出：先打印标题与更新时间，再每检测完一项立即输出一项，
+#      避免先在内部攒齐所有结果、最后一次性打印（那样用户会看到约 10 秒空白、误以为卡住）。
 
 # 输出 UTF-8（脚本单独运行时也保证中文不乱码）
 try {
@@ -61,63 +63,9 @@ function Get-Runtime {
     return $info
 }
 
-# ---- 逐语言检测 ----
-# PowerShell 5.1（系统自带 powershell.exe，即脚本当前运行环境）
-$ps51Path = (Get-Process -Id $PID).Path
-$ps51Ver = ''
-try { $ps51Ver = [string]$PSVersionTable.PSVersion } catch { }
-
-# PowerShell 7（pwsh，可选安装；版本取文件属性，避免额外启动 pwsh 进程）
-$pwshPath = ''
-$pwshVer = ''
-$pwshCmd = Get-Command -Name 'pwsh' -CommandType Application -ErrorAction SilentlyContinue | Select-Object -First 1
-if ($pwshCmd -and $pwshCmd.Path) {
-    $pwshPath = $pwshCmd.Path
-    try {
-        $pwshVer = (Get-Item $pwshPath).VersionInfo.ProductVersion
-        if ([string]::IsNullOrWhiteSpace($pwshVer)) { $pwshVer = (Get-Item $pwshPath).VersionInfo.FileVersion }
-    } catch { }
-}
-
-# cmd（cmd.exe 版本即 Windows 系统版本）
-$cmdPath = $env:ComSpec
-$cmdVer = ''
-try { $cmdVer = (Get-Item $cmdPath).VersionInfo.ProductVersion } catch { }
-
-# bash（Git Bash 等，未加入 PATH 则视为未配置）
-$bashInfo = Get-Runtime 'bash' @('--version') 'version\s+([^\s,]+)'
-$bashVer = if ($bashInfo) { $bashInfo.Version } else { '' }
-$bashPath = if ($bashInfo) { $bashInfo.Path } else { '' }
-
-# java（java -version 输出在 stderr，已 2>&1 合并）
-$javaInfo = Get-Runtime 'java' @('-version')
-$javaVer = if ($javaInfo) { $javaInfo.Version } else { '' }
-$javaPath = if ($javaInfo) { $javaInfo.Path } else { '' }
-
-# python（Windows 商店 stub 未安装真 Python 时执行失败，会被视为未配置）
-$pyInfo = Get-Runtime 'python' @('--version') '' '^Python\s+'
-if (-not $pyInfo -or -not $pyInfo.Version) { $pyInfo = Get-Runtime 'python3' @('--version') '' '^Python\s+' }
-$pythonVer = if ($pyInfo) { $pyInfo.Version } else { '' }
-$pythonPath = if ($pyInfo) { $pyInfo.Path } else { '' }
-
-# node
-$nodeInfo = Get-Runtime 'node' @('--version')
-$nodeVer = if ($nodeInfo) { $nodeInfo.Version } else { '' }
-$nodePath = if ($nodeInfo) { $nodeInfo.Path } else { '' }
-
-# go
-$goInfo = Get-Runtime 'go' @('version') '' '^go version\s+'
-$goVer = if ($goInfo) { $goInfo.Version } else { '' }
-$goPath = if ($goInfo) { $goInfo.Path } else { '' }
-
-# rust
-$rustInfo = Get-Runtime 'rustc' @('--version') '' '^rustc\s+'
-$rustVer = if ($rustInfo) { $rustInfo.Version } else { '' }
-$rustPath = if ($rustInfo) { $rustInfo.Path } else { '' }
-
-# ---- 输出 ----
+# ---- 标题与说明：先打印，让用户立即看到脚本已启动（而非攒到最后一次性刷出）----
 Say '=========================================='
-Say ' 运行环境检测'
+Say ' 运行时环境检测'
 Say '=========================================='
 # ---- 控制台同步打印「更新时间」：从脚本头部注释读取，便于用户贴错误日志时直接看到脚本版本时间 ----
 $updateTime = ''
@@ -132,32 +80,82 @@ try {
 if (-not [string]::IsNullOrWhiteSpace($updateTime)) {
     SayC $YELLOW '信息' "更新时间: $updateTime"
 }
-SayC $YELLOW '信息' '各语言运行时版本与可执行文件路径'
+SayC $YELLOW '信息' '逐项检测本机各语言运行时（检测完成一项即输出一项，请稍候）'
 Say ''
-$rows = @(
-    @{ Lang = 'PowerShell 5.1'; Version = $ps51Ver;   Path = $ps51Path },
-    @{ Lang = 'PowerShell 7';   Version = $pwshVer;   Path = $pwshPath },
-    @{ Lang = 'cmd';            Version = $cmdVer;    Path = $cmdPath },
-    @{ Lang = 'bash';           Version = $bashVer;   Path = $bashPath },
-    @{ Lang = 'java';           Version = $javaVer;   Path = $javaPath },
-    @{ Lang = 'python';         Version = $pythonVer; Path = $pythonPath },
-    @{ Lang = 'node';           Version = $nodeVer;   Path = $nodePath },
-    @{ Lang = 'go';             Version = $goVer;     Path = $goPath },
-    @{ Lang = 'rust';           Version = $rustVer;   Path = $rustPath }
-)
-foreach ($r in $rows) {
-    Say "[$($r.Lang)]"
-    if ($r.Path) {
-        $ver = $r.Version
-        if ([string]::IsNullOrWhiteSpace($ver)) { $ver = '未知' }
+
+# ---- 逐语言「检测中 -> 结果」流式输出，避免一次性憋到最后让用户以为卡住 ----
+function Show-RuntimeRow {
+    param([string]$Lang, [string]$Path, [string]$Version)
+    Say "[$Lang]"
+    if ($Path) {
+        $ver = if ([string]::IsNullOrWhiteSpace($Version)) { '未知' } else { $Version }
         Say "版本号：$ver"
-        Say "可执行文件路径：$($r.Path)"
+        Say "可执行文件路径：$Path"
     } else {
         Say '未检测到运行时环境'
     }
     Say ''
 }
+
+# PowerShell 5.1（系统自带 powershell.exe，即脚本当前运行环境）
+SayC $YELLOW '信息' '检测中: PowerShell 5.1 ...'
+$ps51Path = (Get-Process -Id $PID).Path
+$ps51Ver = ''
+try { $ps51Ver = [string]$PSVersionTable.PSVersion } catch { }
+Show-RuntimeRow -Lang 'PowerShell 5.1' -Path $ps51Path -Version $ps51Ver
+
+# PowerShell 7（pwsh，可选安装；版本取文件属性，避免额外启动 pwsh 进程）
+SayC $YELLOW '信息' '检测中: PowerShell 7 ...'
+$pwshPath = ''
+$pwshVer = ''
+$pwshCmd = Get-Command -Name 'pwsh' -CommandType Application -ErrorAction SilentlyContinue | Select-Object -First 1
+if ($pwshCmd -and $pwshCmd.Path) {
+    $pwshPath = $pwshCmd.Path
+    try {
+        $pwshVer = (Get-Item $pwshPath).VersionInfo.ProductVersion
+        if ([string]::IsNullOrWhiteSpace($pwshVer)) { $pwshVer = (Get-Item $pwshPath).VersionInfo.FileVersion }
+    } catch { }
+}
+Show-RuntimeRow -Lang 'PowerShell 7' -Path $pwshPath -Version $pwshVer
+
+# cmd（cmd.exe 版本即 Windows 系统版本）
+SayC $YELLOW '信息' '检测中: cmd ...'
+$cmdPath = $env:ComSpec
+$cmdVer = ''
+try { $cmdVer = (Get-Item $cmdPath).VersionInfo.ProductVersion } catch { }
+Show-RuntimeRow -Lang 'cmd' -Path $cmdPath -Version $cmdVer
+
+# bash（Git Bash 等，未加入 PATH 则视为未配置）
+SayC $YELLOW '信息' '检测中: bash ...'
+$bashInfo = Get-Runtime 'bash' @('--version') 'version\s+([^\s,]+)'
+Show-RuntimeRow -Lang 'bash' -Path $bashInfo.Path -Version $bashInfo.Version
+
+# java（java -version 输出在 stderr，已 2>&1 合并）
+SayC $YELLOW '信息' '检测中: java ...'
+$javaInfo = Get-Runtime 'java' @('-version')
+Show-RuntimeRow -Lang 'java' -Path $javaInfo.Path -Version $javaInfo.Version
+
+# python（Windows 商店 stub 未安装真 Python 时执行失败，会被视为未配置；python3 兜底）
+SayC $YELLOW '信息' '检测中: python ...'
+$pyInfo = Get-Runtime 'python' @('--version') '' '^Python\s+'
+if (-not $pyInfo -or -not $pyInfo.Version) { $pyInfo = Get-Runtime 'python3' @('--version') '' '^Python\s+' }
+Show-RuntimeRow -Lang 'python' -Path $pyInfo.Path -Version $pyInfo.Version
+
+# node
+SayC $YELLOW '信息' '检测中: node ...'
+$nodeInfo = Get-Runtime 'node' @('--version')
+Show-RuntimeRow -Lang 'node' -Path $nodeInfo.Path -Version $nodeInfo.Version
+
+# go
+SayC $YELLOW '信息' '检测中: go ...'
+$goInfo = Get-Runtime 'go' @('version') '' '^go version\s+'
+Show-RuntimeRow -Lang 'go' -Path $goInfo.Path -Version $goInfo.Version
+
+# rust
+SayC $YELLOW '信息' '检测中: rust ...'
+$rustInfo = Get-Runtime 'rustc' @('--version') '' '^rustc\s+'
+Show-RuntimeRow -Lang 'rust' -Path $rustInfo.Path -Version $rustInfo.Version
+
 Say '=========================================='
 SayC $GREEN '结果' '完成'
 Say '=========================================='
-

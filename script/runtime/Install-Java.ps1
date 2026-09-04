@@ -50,7 +50,7 @@ if ([string]::IsNullOrWhiteSpace($SetJavaHome)) { $SetJavaHome = '是' }
 if ([string]::IsNullOrWhiteSpace($AddToPath))   { $AddToPath = '是' }
 
 Say '=========================================='
-Say " 自动安装 JDK（$Distro）"
+Say ' 安装 Java 运行时环境'
 Say '=========================================='
 # ---- 控制台同步打印「更新时间」：从脚本头部注释读取，便于用户贴错误日志时直接看到脚本版本时间 ----
 $updateTime = ''
