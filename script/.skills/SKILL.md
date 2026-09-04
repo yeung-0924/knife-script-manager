@@ -330,7 +330,7 @@ Write-Host "接收参数 Name = $Name"
           if ($hdr -match '更新时间:\s*([\d\-: ]+)\s*$') { $updateTime = $Matches[1].Trim() }
       }
   } catch { }
-  if (-not [string]::IsNullOrWhiteSpace($updateTime)) { SayC $YELLOW '脚本' "更新时间: $updateTime" }
+  if (-not [string]::IsNullOrWhiteSpace($updateTime)) { SayC $YELLOW '信息' "更新时间: $updateTime" }
   ```
   其它语言同理：用各自方式读取首行注释里的 `更新时间:` 并原样输出一行。**目的**：用户贴错误日志时，AI 无需对照文件、直接从日志里就能读到脚本版本时间，立刻判断其运行的脚本是否为最新。模板 `templates/tpl_powershell.ps1` 已内置该段，新脚本直接复用；其它语言的模板也应在标题后加入等价的打印。
 
