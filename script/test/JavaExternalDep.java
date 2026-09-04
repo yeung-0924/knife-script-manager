@@ -1,3 +1,4 @@
+// 更新时间: 2026-09-04
 // Java 外部依赖测试：验证 lib 目录下的第三方 jar（如 hutool-all）能否被自动加载。
 // 运行时由 RuntimeResolver 把 SCRIPT_MANAGER_LIB 下的所有 *.jar 自动拼成 --class-path，
 // 故无需在脚本内手动指定 -cp，直接 import 即可。

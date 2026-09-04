@@ -1,4 +1,5 @@
 #!/usr/bin/env python3
+# 更新时间: 2026-09-04
 # Python 示例脚本：输出 Hello World 并回显传入的参数
 # 运行参数：-Name <值>，默认 World
 
