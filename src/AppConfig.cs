@@ -7,7 +7,9 @@ using System.Text;
 namespace ScriptManager;
 
 /// <summary>
-/// 用户侧配置：读取 exe 同级的 config/config.ini。修改后重启程序生效。
+/// 用户侧配置：读取 exe 同级的 config/config.ini。各配置项均为「保存即生效、无需重启」：
+/// cache_dir 改动由 CacheStore.Relocate 迁移旧缓存内容并即时切换；runtime_dir / log_dir 等仅作环境变量注入或目录图标，
+/// 下次启动脚本/重绘即生效；脚本索引文件改动由配置编辑器通知左侧树实时重建。
 /// 当前支持（[script] 节）：
 ///   script_index_file = 脚本索引文件（指向 index.json，默认 script\index.json；相对路径相对 exe 目录，绝对/UNC 直接用）
 ///   lib_dir    = 第三方依赖目录（默认 lib，如 JDBC jar；注入环境变量 SCRIPT_MANAGER_LIB）
@@ -71,10 +73,14 @@ public static class AppConfig
     /// <summary>
     /// 运行时安装目录（来自配置的 runtime_dir，默认 exe 同级 runtime；注入环境变量 SCRIPT_MANAGER_RUNTIME 供脚本引用）。
     /// 安装类脚本（Install-*.ps1）在未指定安装目录时以此作为默认目标；目录不存在时由脚本自行创建。
+    /// 该值每次启动脚本时由 RuntimeResolver 现读，配置改动保存即生效，无需重启。
     /// </summary>
     public static string RuntimeDir => ResolveDir("script", "runtime_dir", "runtime");
 
-    /// <summary>缓存文件目录（来自配置的 cache_dir，默认 exe 同级 cache）。</summary>
+    /// <summary>
+    /// 缓存文件目录（来自配置的 cache_dir，默认 exe 同级 cache）。
+    /// 改动后由 CacheStore.Relocate 把旧目录内容整体迁移到新目录并即时切换 CacheStore.CacheRoot，保存即生效，无需重启。
+    /// </summary>
     public static string CacheDir => ResolveDir("script", "cache_dir", "cache");
 
     /// <summary>日志文件目录（来自配置的 log_dir，默认 exe 同级 log）。</summary>
@@ -83,7 +89,7 @@ public static class AppConfig
     /// <summary>
     /// 脚本默认执行超时（秒）。0 或负数表示不限制（无限等待，默认）。
     /// 单脚本可在 index.json 用 <c>timeout</c> 字段单独覆盖；两者皆未设则不超时。
-    /// 修改后重启程序生效。
+    /// 配置改动保存即生效，无需重启（每次执行脚本时现读）。
     /// </summary>
     public static int DefaultTimeoutSeconds
     {
@@ -200,7 +206,7 @@ public static class AppConfig
 
     /// <summary>
     /// 重新从磁盘加载配置到内存缓存（<see cref="Sections"/>）。配置编辑保存后调用，
-    /// 使本进程后续读取即时反映新值（部分配置如脚本目录切换仍需重启才真正生效）。
+    /// 使本进程后续读取即时反映新值；目录类配置（cache_dir 等）的「切换」由 CacheStore.Relocate 另行完成。
     /// </summary>
     public static void Reload()
     {

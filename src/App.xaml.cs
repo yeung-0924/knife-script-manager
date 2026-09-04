@@ -18,12 +18,13 @@ public partial class App : Application
         Directory.CreateDirectory(logDir); // 配置的日志目录可能不存在（含 UNC），确保可写
         // 为各标准目录套用彩色文件夹样式（desktop.ini + System 属性）。放在最早期，不受后续 UI 初始化成败影响。
         FolderCustomizer.ApplyToStandardDirs();
-        var logPath = Path.Combine(logDir, "error.log");
 
+        // 错误日志路径每次现算：log_dir 配置改动后无需重启，下一次异常即写入新目录。
         void Write(string kind, Exception? ex)
         {
             try
             {
+                var logPath = Path.Combine(AppConfig.LogDir, "error.log");
                 var line = $"[{DateTime.Now:yyyy-MM-dd HH:mm:ss}] {kind}\n{ex}\n";
                 File.AppendAllText(logPath, line, System.Text.Encoding.UTF8);
             }
@@ -46,14 +47,14 @@ public partial class App : Application
     {
         base.OnStartup(e);
 
-        var logDir = AppConfig.LogDir;
-        Directory.CreateDirectory(logDir);
-        var logPath = Path.Combine(logDir, "error.log");
+        // 错误日志目录确保存在（log_dir 可能指向 UNC）；路径每次现算，配置改动后无需重启即生效。
+        Directory.CreateDirectory(AppConfig.LogDir);
 
         DispatcherUnhandledException += (_, args) =>
         {
             try
             {
+                var logPath = Path.Combine(AppConfig.LogDir, "error.log");
                 var line = $"[{DateTime.Now:yyyy-MM-dd HH:mm:ss}] DispatcherUnhandledException\n{args.Exception}\n";
                 File.AppendAllText(logPath, line, System.Text.Encoding.UTF8);
             }
