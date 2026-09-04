@@ -12,8 +12,9 @@ namespace ScriptManager.Views;
 /// <summary>
 /// 配置编辑弹窗：结构化编辑 config.ini 的 [script] 节关键项。
 /// 写入由 <see cref="AppConfig.SetRawValue"/> 保证保留注释/顺序/其它节；保存后调用
-/// <see cref="AppConfig.Reload"/> 刷新内存缓存，但部分配置（如脚本目录切换）仍需重启才真正生效，
-/// 故弹窗仅提示「已保存（重启后生效）」，不自动重建。
+/// <see cref="AppConfig.Reload"/> 刷新内存缓存。多数配置读时取值、保存即生效（无需重启）；
+/// 其中脚本索引文件(script_index_file)被改动时，会通知宿主视图模型实时重建左侧目录树。
+/// 仅运行时目录(runtime_dir)对应的「运行时自动检测」在启动时跑一次、已检测路径会缓存，改该目录后建议重启。
 /// 目录/文件项均为只读选择框（浏览按钮），不可手输；未自定义时留空并显示默认相对路径占位符，
 /// 点击 × 或「默认值」可清除、回落到内置相对默认（script\index.json / lib / runtime / cache / log）。
 /// 「默认执行超时(秒)」是弹窗内唯一允许手输的数字项（空白 = 不限制）。

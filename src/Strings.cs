@@ -42,7 +42,7 @@ public static class Strings
         public const string MenuSettings = "设置";
         public const string MenuEditConfig = "编辑配置...";
         public const string TitleConfigEditor = "配置编辑";
-        public const string ConfigEditorNote = "配置修改后需重启程序生效";
+        public const string ConfigEditorNote = "配置保存后立即生效；仅更改运行时目录后建议重启以重新检测运行时";
         public const string ConfigEditorBrowseFolder = "选择目录";
         public const string ConfigEditorBrowseFile = "选择脚本索引文件 (index.json)";
         public const string ConfigEditorTimeoutLabel = "默认执行超时(秒)";
