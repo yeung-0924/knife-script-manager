@@ -35,9 +35,10 @@ public partial class ConfigEditorWindow : Window
         _rows.Add(MakeRow("log_dir", "日志目录", "folder", "log"));
         Rows.ItemsSource = _rows;
 
-        var tRaw = AppConfig.GetRawValue("script", "default_timeout");
+        // 超时同理：留空或显式写 0 都表示「不限制」，统一显示为空白 + 占位符「0（不限制）」
+        var tRaw = AppConfig.GetRawValue("script", "default_timeout")?.Trim();
         _timeout.Placeholder = Strings.ConfigEditorTimeoutPlaceholder;
-        _timeout.Value = string.IsNullOrWhiteSpace(tRaw) ? "" : tRaw.Trim();
+        _timeout.Value = string.IsNullOrWhiteSpace(tRaw) || tRaw == "0" ? "" : tRaw;
         TimeoutGrid.DataContext = _timeout;
     }
 
@@ -45,6 +46,8 @@ public partial class ConfigEditorWindow : Window
     /// 构建一行：内部 <see cref="ConfigRow.Value"/> 只保存用户在 config.ini 中的「自定义覆盖值」
     /// （绝对路径），未自定义时为空白。空白即代表「使用默认相对路径」，由 <see cref="AppConfig"/> 在
     /// 读取时回落到 Placeholder 所示的相对默认值（script\index.json / lib / runtime / cache / log）。
+    /// 注意：config.ini 里若把默认相对路径原样写了出来（如 lib_dir = lib），语义与留空完全等价，
+    /// 此时同样视为「未自定义」，显示为空白 + 占位符，避免用户误以为已经改过配置。
     /// </summary>
     private static ConfigRow MakeRow(string key, string label, string kind, string placeholder)
     {
@@ -55,8 +58,26 @@ public partial class ConfigEditorWindow : Window
             Label = label,
             Kind = kind,
             Placeholder = placeholder,
-            Value = string.IsNullOrWhiteSpace(raw) ? "" : raw.Trim(),
+            Value = IsBuiltInDefault(raw, placeholder) ? "" : raw!.Trim(),
         };
+    }
+
+    /// <summary>
+    /// 判断 config.ini 中的显式值是否等同于内置默认：留空当然是默认；把默认相对路径原样写出来
+    /// （如 script\index.json / lib）语义也与留空一致，同样按默认处理。
+    /// </summary>
+    private static bool IsBuiltInDefault(string? raw, string placeholder)
+    {
+        if (string.IsNullOrWhiteSpace(raw)) return true;
+        return NormalizePath(raw) == NormalizePath(placeholder);
+    }
+
+    /// <summary>路径等价性归一化：统一分隔符、去结尾斜杠、去 .\ 前缀、忽略大小写。</summary>
+    private static string NormalizePath(string p)
+    {
+        p = p.Trim().Replace('/', '\\').TrimEnd('\\');
+        if (p.StartsWith(".\\", StringComparison.Ordinal)) p = p[2..];
+        return p.ToLowerInvariant();
     }
 
     private void Browse_Click(object sender, RoutedEventArgs e)

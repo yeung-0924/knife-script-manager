@@ -1,20 +1,22 @@
 ; knife-script-manager 配置文件（可选）
 ; 复制本文件为 exe 同级的 config/config.ini 即可生效；整段留空或注释则全部使用默认值。
 ; 修改后重启程序生效。
+; 下方各项默认全部注释（= 使用内置默认），需要自定义时取消注释并填写即可；
+; 也可直接在程序内通过「设置 ▸ 编辑配置」可视化修改（留空即恢复默认）。
 
 [script]
 ; 脚本索引文件（指向 index.json，结构见 README）：相对 exe 则用相对路径（如 script\index.json）；绝对/UNC 直接用。
 ; 留空或注释则用默认 script\index.json。
 ; 该项是「文件▸打开」与「设置▸编辑配置▸脚本索引文件」的唯一共同出口，二者写同一键、效果一致。
-script_index_file = script\index.json
+;script_index_file =
 ; 第三方依赖目录（默认：exe 同级 lib；注入环境变量 SCRIPT_MANAGER_LIB 供脚本引用）
-lib_dir = lib
+;lib_dir =
 ; 运行时安装目录（默认：exe 同级 runtime；注入环境变量 SCRIPT_MANAGER_RUNTIME 供安装脚本默认使用）
-runtime_dir = runtime
+;runtime_dir =
 ; 缓存文件目录（默认：exe 同级 cache）
-cache_dir = cache
+;cache_dir =
 ; 日志目录（默认：exe 同级 log，如 error.log）
-log_dir = log
+;log_dir =
 ; 脚本默认执行超时（秒）：0 或留空表示不限制（无限等待，默认）。
 ; 单脚本可在 index.json 用 timeout 字段单独覆盖；两者皆未设则不超时。
-default_timeout = 0
+;default_timeout =

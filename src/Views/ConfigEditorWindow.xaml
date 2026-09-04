@@ -7,38 +7,34 @@
         Width="580" SizeToContent="Height"
         WindowStartupLocation="CenterOwner" ResizeMode="NoResize"
         Background="{DynamicResource BrushWindowBg}">
+    <Window.Resources>
+        <!-- 配置值输入框：右侧预留 × 清空按钮的位置。
+             关键在模板里给 PART_ContentHost 加 Margin={TemplateBinding Padding}——
+             ScrollViewer 才是文本的裁剪边界，内缩后长路径会被裁在 × 左侧，不会压到按钮上
+             （与参数面板的文件选择框同一做法）。 -->
+        <Style x:Key="ConfigValueTextBox" TargetType="TextBox">
+            <Setter Property="BorderThickness" Value="0" />
+            <Setter Property="Background" Value="Transparent" />
+            <Setter Property="VerticalContentAlignment" Value="Center" />
+            <Setter Property="Padding" Value="6,0,24,0" />
+            <Setter Property="Template">
+                <Setter.Value>
+                    <ControlTemplate TargetType="TextBox">
+                        <ScrollViewer x:Name="PART_ContentHost"
+                                      Margin="{TemplateBinding Padding}"
+                                      VerticalAlignment="Center"
+                                      Focusable="False"
+                                      Background="Transparent" />
+                    </ControlTemplate>
+                </Setter.Value>
+            </Setter>
+        </Style>
+    </Window.Resources>
+
     <DockPanel Margin="16">
         <TextBlock DockPanel.Dock="Top" Text="{x:Static local:Strings.ConfigEditorNote}"
                    Foreground="{DynamicResource BrushTextSecondary}" TextWrapping="Wrap"
                    Margin="0,0,0,12" />
-
-        <!-- 默认执行超时(秒)：配置编辑器内唯一允许手输的字段；占位符「0（不限制）」，× 清除回落默认 -->
-        <Grid x:Name="TimeoutGrid" DockPanel.Dock="Bottom" Margin="0,0,0,12">
-            <Grid.ColumnDefinitions>
-                <ColumnDefinition Width="104" />
-                <ColumnDefinition Width="*" />
-            </Grid.ColumnDefinitions>
-            <TextBlock Grid.Column="0" Text="{x:Static local:Strings.ConfigEditorTimeoutLabel}"
-                       VerticalAlignment="Center" Margin="0,0,6,0" />
-            <Border Grid.Column="1" BorderThickness="1" CornerRadius="4"
-                    Height="24" VerticalAlignment="Center" SnapsToDevicePixels="True"
-                    BorderBrush="{DynamicResource BrushBorder}" Background="{DynamicResource BrushPanelBg}">
-                <Grid>
-                    <TextBox Text="{Binding Value, UpdateSourceTrigger=PropertyChanged}"
-                             BorderThickness="0" Background="Transparent"
-                             VerticalContentAlignment="Center" Padding="6,0,10,0"
-                             PreviewTextInput="Timeout_PreviewTextInput" />
-                    <TextBlock Text="{Binding Placeholder}"
-                               Foreground="{DynamicResource BrushPlaceholder}" Margin="6,0,0,0"
-                               VerticalAlignment="Center" IsHitTestVisible="False"
-                               Visibility="{Binding Value, Converter={x:Static local:StringEmptyToVisibilityConverter.Instance}}" />
-                    <Button Style="{StaticResource ClearButton}"
-                            Click="TimeoutClear_Click"
-                            ToolTip="{x:Static local:Strings.ClearButtonToolTip}"
-                            Visibility="{Binding Value, Converter={x:Static local:StringNotEmptyToVisibilityConverter.Instance}}" />
-                </Grid>
-            </Border>
-        </Grid>
 
         <!-- 底部操作条：左「默认值」一键还原，右「保存 / 取消」 -->
         <Grid DockPanel.Dock="Bottom" Margin="0,12,0,0">
@@ -56,55 +52,80 @@
         <TextBlock x:Name="StatusText" DockPanel.Dock="Bottom" Visibility="Collapsed"
                    Foreground="{DynamicResource BrushPrimary}" Margin="0,0,0,8" />
 
-        <ItemsControl x:Name="Rows">
-            <ItemsControl.ItemTemplate>
-                <DataTemplate>
-                    <Grid Margin="0,0,0,12">
-                        <Grid.ColumnDefinitions>
-                            <ColumnDefinition Width="104" />
-                            <ColumnDefinition Width="*" />
-                        </Grid.ColumnDefinitions>
-                        <Grid.RowDefinitions>
-                            <RowDefinition Height="Auto" />
-                            <RowDefinition Height="Auto" />
-                        </Grid.RowDefinitions>
-                        <TextBlock Grid.Column="0" Grid.Row="0" Text="{Binding Label}"
-                                   VerticalAlignment="Center" Margin="0,0,6,0" />
-                        <!-- 与参数列表文件选择框一致：只读输入框 + 右侧「浏览」后缀按钮拼合为一体，只能选不能手输 -->
-                        <DockPanel Grid.Column="1" Grid.Row="0" LastChildFill="True">
-                            <Button DockPanel.Dock="Right" Style="{StaticResource BaseButtonLightSuffix}"
-                                    Width="24" Height="24" Padding="0" Margin="0" VerticalAlignment="Center"
-                                    Click="Browse_Click"
-                                    ToolTip="{x:Static local:Strings.BrowseButtonToolTip}">
-                                <svgc:SvgViewbox Width="13" Height="13"
-                                                 UriSource='pack://application:,,,/assets/images/button/folder-open.svg'
-                                                 HorizontalAlignment="Center" VerticalAlignment="Center" />
-                            </Button>
-                            <Border BorderThickness="1,1,0,1" CornerRadius="4,0,0,4"
-                                    SnapsToDevicePixels="True" Height="24" VerticalAlignment="Center"
-                                    BorderBrush="{DynamicResource BrushBorder}"
-                                    Background="{DynamicResource BrushPanelBg}">
-                                <Grid>
-                                    <TextBox Text="{Binding Value}" IsReadOnly="True"
-                                             BorderThickness="0" Background="Transparent"
-                                             VerticalContentAlignment="Center" Padding="6,0,10,0" />
-                                    <!-- 未自定义（Value 为空）时显示的默认相对路径占位符 -->
-                                    <TextBlock Text="{Binding Placeholder}"
-                                               Foreground="{DynamicResource BrushPlaceholder}"
-                                               Margin="6,0,0,0" VerticalAlignment="Center"
-                                               IsHitTestVisible="False"
-                                               Visibility="{Binding Value, Converter={x:Static local:StringEmptyToVisibilityConverter.Instance}}" />
-                                    <!-- 清空按钮：仅在已选择（Value 非空）时显示，点 × 回落到默认相对路径 -->
-                                    <Button Style="{StaticResource ClearButton}"
-                                            Click="Clear_Click"
-                                            ToolTip="{x:Static local:Strings.ClearButtonToolTip}"
-                                            Visibility="{Binding Value, Converter={x:Static local:StringNotEmptyToVisibilityConverter.Instance}}" />
-                                </Grid>
-                            </Border>
-                        </DockPanel>
+        <StackPanel>
+            <ItemsControl x:Name="Rows">
+                <ItemsControl.ItemTemplate>
+                    <DataTemplate>
+                        <Grid Margin="0,0,0,12">
+                            <Grid.ColumnDefinitions>
+                                <ColumnDefinition Width="104" />
+                                <ColumnDefinition Width="*" />
+                            </Grid.ColumnDefinitions>
+                            <TextBlock Grid.Column="0" Text="{Binding Label}"
+                                       VerticalAlignment="Center" Margin="0,0,6,0" />
+                            <!-- 与参数列表文件选择框一致：只读输入框 + 右侧「浏览」后缀按钮拼合为一体，只能选不能手输 -->
+                            <DockPanel Grid.Column="1" LastChildFill="True">
+                                <Button DockPanel.Dock="Right" Style="{StaticResource BaseButtonLightSuffix}"
+                                        Width="24" Height="24" Padding="0" Margin="0" VerticalAlignment="Center"
+                                        Click="Browse_Click"
+                                        ToolTip="{x:Static local:Strings.BrowseButtonToolTip}">
+                                    <svgc:SvgViewbox Width="13" Height="13"
+                                                     UriSource='pack://application:,,,/assets/images/button/folder-open.svg'
+                                                     HorizontalAlignment="Center" VerticalAlignment="Center" />
+                                </Button>
+                                <Border BorderThickness="1,1,0,1" CornerRadius="4,0,0,4"
+                                        SnapsToDevicePixels="True" Height="24" VerticalAlignment="Center"
+                                        BorderBrush="{DynamicResource BrushBorder}"
+                                        Background="{DynamicResource BrushPanelBg}">
+                                    <Grid>
+                                        <TextBox Text="{Binding Value}" IsReadOnly="True"
+                                                 Style="{StaticResource ConfigValueTextBox}" />
+                                        <!-- 未自定义（Value 为空）时显示的默认相对路径占位符 -->
+                                        <TextBlock Text="{Binding Placeholder}"
+                                                   Foreground="{DynamicResource BrushPlaceholder}"
+                                                   Margin="6,0,0,0" VerticalAlignment="Center"
+                                                   IsHitTestVisible="False"
+                                                   Visibility="{Binding Value, Converter={x:Static local:StringEmptyToVisibilityConverter.Instance}}" />
+                                        <!-- 清空按钮：仅在已选择（Value 非空）时显示，点 × 回落到默认相对路径 -->
+                                        <Button Style="{StaticResource ClearButton}"
+                                                Click="Clear_Click"
+                                                ToolTip="{x:Static local:Strings.ClearButtonToolTip}"
+                                                Visibility="{Binding Value, Converter={x:Static local:StringNotEmptyToVisibilityConverter.Instance}}" />
+                                    </Grid>
+                                </Border>
+                            </DockPanel>
+                        </Grid>
+                    </DataTemplate>
+                </ItemsControl.ItemTemplate>
+            </ItemsControl>
+
+            <!-- 默认执行超时(秒)：紧跟在「日志目录」下方，是配置编辑器内唯一允许手输的字段；
+                 留空即不限制，占位符显示「0（不限制）」，× 清除回落默认 -->
+            <Grid x:Name="TimeoutGrid">
+                <Grid.ColumnDefinitions>
+                    <ColumnDefinition Width="104" />
+                    <ColumnDefinition Width="*" />
+                </Grid.ColumnDefinitions>
+                <TextBlock Grid.Column="0" Text="{x:Static local:Strings.ConfigEditorTimeoutLabel}"
+                           VerticalAlignment="Center" Margin="0,0,6,0" />
+                <Border Grid.Column="1" BorderThickness="1" CornerRadius="4"
+                        Height="24" VerticalAlignment="Center" SnapsToDevicePixels="True"
+                        BorderBrush="{DynamicResource BrushBorder}" Background="{DynamicResource BrushPanelBg}">
+                    <Grid>
+                        <TextBox Text="{Binding Value, UpdateSourceTrigger=PropertyChanged}"
+                                 Style="{StaticResource ConfigValueTextBox}"
+                                 PreviewTextInput="Timeout_PreviewTextInput" />
+                        <TextBlock Text="{Binding Placeholder}"
+                                   Foreground="{DynamicResource BrushPlaceholder}" Margin="6,0,0,0"
+                                   VerticalAlignment="Center" IsHitTestVisible="False"
+                                   Visibility="{Binding Value, Converter={x:Static local:StringEmptyToVisibilityConverter.Instance}}" />
+                        <Button Style="{StaticResource ClearButton}"
+                                Click="TimeoutClear_Click"
+                                ToolTip="{x:Static local:Strings.ClearButtonToolTip}"
+                                Visibility="{Binding Value, Converter={x:Static local:StringNotEmptyToVisibilityConverter.Instance}}" />
                     </Grid>
-                </DataTemplate>
-            </ItemsControl.ItemTemplate>
-        </ItemsControl>
+                </Border>
+            </Grid>
+        </StackPanel>
     </DockPanel>
 </Window>
