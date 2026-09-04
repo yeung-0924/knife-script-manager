@@ -42,12 +42,14 @@ public static class Strings
         public const string MenuSettings = "设置";
         public const string MenuEditConfig = "编辑配置...";
         public const string TitleConfigEditor = "配置编辑";
-        public const string ConfigEditorNote = "修改后需重启程序生效。各项只能选择目录/文件（不可手动输入）；点击 × 可清除当前选择、恢复默认相对路径，或点「默认值」一键全部还原。";
+        public const string ConfigEditorNote = "修改后需重启程序生效。目录/文件项只能浏览选择（不可手输），留空即恢复默认相对路径；「默认执行超时」为唯一可手输的数字项。点击 × 可清除单项，或点「默认值」一键全部还原。";
         public const string ConfigEditorSaved = "已保存（重启后生效）";
         public const string ConfigEditorRestored = "已还原为默认值（重启后生效）";
         public const string ConfigEditorSaveFail = "保存失败：{0}";
         public const string ConfigEditorBrowseFolder = "选择目录";
         public const string ConfigEditorBrowseFile = "选择脚本索引文件 (index.json)";
+        public const string ConfigEditorTimeoutLabel = "默认执行超时(秒)";
+        public const string ConfigEditorTimeoutPlaceholder = "0（不限制）";
         #endregion
 
     #region 状态消息（StatusText）
