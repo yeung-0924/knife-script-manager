@@ -21,25 +21,14 @@
       {
         "name": "VERSION",
         "label": "PowerShell 版本",
-        "default": "PowerShell 7.6 (LTS)",
+        "default": "PowerShell 7.5",
         "required": true,
         "options": [
-          "PowerShell 7.6 (LTS)",
-          "PowerShell 7.5 (STS)",
-          "PowerShell 7.4 (LTS)"
+          "PowerShell 7.5",
+          "PowerShell 7.4 (LTS)",
+          "PowerShell 7.2 (LTS)"
         ],
-        "placeholder": "选择要安装的 PowerShell 7 大版本（LTS 支持更久，STS 为半年度报告版）"
-      },
-      {
-        "name": "DOWNLOAD_SOURCE",
-        "label": "下载源",
-        "default": "Microsoft",
-        "required": true,
-        "options": [
-          "Microsoft",
-          "GitHub"
-        ],
-        "placeholder": "Microsoft=通过 WinGet 从微软官方渠道安装（默认）；GitHub=直接下载官方便携 zip 包到自定义目录"
+        "placeholder": "选择要安装的 PowerShell 7 大版本（LTS 版本支持更久）"
       },
       {
         "name": "OVERWRITE",

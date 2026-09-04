@@ -1,3 +1,4 @@
+// 更新时间: 2026-09-04
 // 单文件 Java 脚本（需 Java 11+，支持 `java java.java` 直接源码启动，无需先 javac）
 // 简单演示：输出 Hello 并回显传入的参数。
 public class java {
@@ -27,3 +28,4 @@ public class java {
         System.out.println("\u001b[97m这是一行\"97\"日志（亮白）\u001b[0m");
     }
 }
+

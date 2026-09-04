@@ -1,4 +1,5 @@
 package main
+// 更新时间: 2026-09-04
 
 import "fmt"
 
@@ -8,3 +9,4 @@ func main() {
 	fmt.Println("===== Hello, World =====")
 	fmt.Println("Hello, _p{NAME}!")
 }
+

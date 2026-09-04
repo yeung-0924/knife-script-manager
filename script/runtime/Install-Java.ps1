@@ -1,3 +1,4 @@
+# 更新时间: 2026-09-04
 # Install-Java.ps1 - 按选择的发行版（Oracle OpenJDK / Microsoft OpenJDK / Alibaba Dragonwell）与版本下载并安装 JDK
 # 说明（几个关键健壮性处理）：
 #   1) 统一用 Write-Output 输出（走 success stream / stdout）。
@@ -497,3 +498,4 @@ if ($SetJavaHome -eq '是' -or $AddToPath -eq '是') {
     SayC $YELLOW '信息' "环境变量已写入【$scope 级】，新打开的终端才会生效"
 }
 Say '=========================================='
+

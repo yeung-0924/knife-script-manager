@@ -269,22 +269,6 @@ Write-Host "接收参数 Name = $Name"
 
 ---
 
-## 九、常见坑（避坑清单）
-
-- **不要把 PowerShell 只读/自动变量当普通变量赋值**，否则直接抛 `Cannot overwrite variable XXX because it is read-only or constant`、脚本中断。曾踩：`$home`（用户主目录，自动变量）被误用作局部变量名 → 安装 PowerShell 7 的脚本崩溃。同理规避这些保留名：
-  - `$HOME`、`$PWD`、`$PSHOME`、`$HOST`（PowerShell 7+）、`$PID`、`$PROFILE`、`$PSVERSIONTABLE`、`$EXECUTIONCONTEXT`、`$MYINVOCATION`、`$ARGS`、`$INPUT`、`$MATCHES`、`$NULL`、`$TRUE`、`$FALSE`、`$ERROR`、`$LASTEXITCODE`、`$FOREACH`。
-  - PowerShell 变量名不区分大小写，`$home` 与 `$HOME` 是同一个变量——小写也中招。
-  - 安全做法：局部变量用更具描述性的名字（如 `$pwshHome`、`$installDir`），避开上述保留名。
-- **占位符 `_p{NAME}` 与语言自身变量不冲突**：程序只识别 `_p{}`，不会误伤 `${}`、Python f-string、`$Env:XXX` 等原生语法。
-- **PowerShell 里改文件/目录属性、操作受限路径时，优先 `try/catch + ErrorActionPreference='Stop'`**，避免单步失败被静默吞掉。
-- **函数内 `exit 1` 会直接终止整个脚本**（即使以 `$x = Func` 方式调用），不能作为"返回错误"用**。需要让调用方决定是否回退/收口时，函数应 `return $null`（或返回错误对象），由主流程统一判断；否则失败被赋成 `$null` 一路漏到下游，会抛出含糊的「参数绑定为 null」错误。`exit 1` 只适合「脚本必须立即停止」的硬错误（如参数非法）。
-- **PowerShell 7 经 WinGet 安装时，`winget.exe` 是 App Execution Alias，在管理员提权/非交互环境常不在 PATH**。定位时除了 `Get-Command winget.exe`，应回退到 `$env:LOCALAPPDATA\Microsoft\WindowsApps\winget.exe`；且 `--scope machine` 安装才落入 `C:\Program Files\PowerShell`，每用户安装则在 `LocalAppData\Microsoft\PowerShell`，查找 pwsh.exe 时需两者都覆盖。更可靠的是直接找 `C:\Program Files\WindowsApps\Microsoft.DesktopAppInstaller_*_x64*\winget.exe` 真实二进制（提权下也能调用）。
-- **「兜底收口」守卫不要把 `$null` 喂给 `Join-Path`**：常见写法 `if ($x -eq $null -or -not (Test-Path (Join-Path $x 'y')))` 在 `$x` 为 `$null` 时仍会先求值 `Join-Path $x 'y'`，抛出 `Cannot bind argument to parameter 'Path' because it is null`（"守卫自爆"）。务必先单独判空：`if ([string]::IsNullOrWhiteSpace($x)) { ...exit }` 通过后再 `Join-Path`。安装 PowerShell 7 脚本曾因此反复崩溃。
-- **GitHub 源的「查版本」步骤（`api.github.com`）在受限网络（如国内）常被墙，会直接卡死整个安装**。优先直接用 `大版本.0`（如 7.5 → 7.5.0）拼下载链接，并准备镜像回退（如 `ghproxy` 类代理），避免依赖 GitHub API。
-
-
----
-
 ## 九、新增脚本步骤（检查清单）
 
 1. 决定语言 → 按第三节命名文件，放到 `script/` 下合适子目录。
@@ -313,6 +297,40 @@ Write-Host "接收参数 Name = $Name"
 每个模板均包含：
 - 一个 `===== Hello, World =====` 段标题（控制台可见，遵循第五节约定）；
 - 一行用 `_p{NAME}` 占位符的问候（运行前由程序替换）；
+- 一行 `# 更新时间: YYYY-MM-DD`（位于文件头部，见第十一节；**从模板生成新脚本时把日期改为当天**）；
 - 必要的语言收参/包结构注释。
 
 **用法**：复制对应模板 → 按第三节重命名 → 改写逻辑 → 在 `index.json` 注册。完整多段范例见 `../demo/hello-world/`。
+
+---
+
+## 十一、脚本头部必须标注「更新时间」（强制）
+
+每个脚本文件头部**必须**包含一行「更新时间」注释，格式：`<注释符> 更新时间: YYYY-MM-DD`（如 `# 更新时间: 2026-09-04`）。
+
+- **作用**：用户贴错误日志时，AI 可通过脚本头部更新时间判断其运行的脚本是否为最新版本，快速区分「脚本太旧、没更新」还是「真有 bug」——避免反复在旧脚本上排错。
+- **位置规则（关键，避免破坏首行约束）**：
+  - 无首行特殊要求的语言（PowerShell / pwsh / 无 shebang 的 Python / 普通脚本）：放在**文件第一行**（即第一个注释行）。
+  - 有 shebang 的脚本（`#!/usr/bin/env bash`、`#!/usr/bin/env python3`、`#!/usr/bin/env node` 等以 `#!` 开头）：`#!` 必须留第一行，更新时间放**第二行**（第一个注释行），注释符用 `#`。
+  - CMD / Batch（`@echo off` 起手）：`@echo off` 留第一行，更新时间放第二行，注释符用 `rem`。
+  - Go（`package main` 起手）：`package` 行之后（第二行）加 `// 更新时间: ...`。
+  - Java / Rust / Node / C 等以 `//` 注释或 `fn` / `public class` 起手（非 shebang）：更新时间作为**第一个注释行**（通常即文件第一行），注释符用 `//`。
+- **更新纪律**：每次修改脚本逻辑后，**必须**把这行日期改为当天；仅改注释/文案也建议顺手更新。
+- **只标日期、不写改动内容（重要）**：头部只保留「更新时间: 日期」这一行，**严禁**在脚本里追加「本次改了什么 / 改动说明 / changelog」之类的注释。理由：发版后用户能看到脚本，日期戳已足够让 AI 判断版本新旧，而改动说明会暴露你改过什么。需要沉淀的是「坑」（见第十二节，属内部 AI 文档），不是「本次改了啥」。
+- **模板已内置**：`templates/tpl_*.xx` 已带该行，从模板生成新脚本时把日期改为当天即可。
+- 该规则对 9 种语言一致执行，不得遗漏。
+
+---
+
+## 十二、常见坑（踩坑沉淀 —— 编写 / 调试脚本时务必持续补充）
+
+> 本节能帮**用户自己的 AI**（以及后续会话）直接避开已踩过的雷。每当你在编写或排查脚本时遇到新坑，立刻补一条到这里，格式：`现象 → 原因 → 正确写法`。
+
+1. **PowerShell 自动变量只读，不能赋值**：`$HOME`、`$PWD`、`$PSHOME`、`$HOST`、`$PID` 等为只读/常量，赋值会抛 `Cannot overwrite variable X because it is read-only or constant`。需要自定义变量时改用其它名字（如用 `$pwshHome` 而非 `$home`）。
+2. **函数内 `exit 1` 会终止整个脚本进程**：PowerShell 中，以 `$x = Func` 方式调用函数时，函数体里的 `exit 1` 不只是退出函数，而是**直接终止整个脚本进程**（已实测验证）。错误分支应改用 `return $null` / `return` 把控制权交回调用处，由主流程统一判空收口，**不要拿 `exit` 当 return 用**。
+3. **PowerShell 7 经 WinGet 安装：`winget.exe` 在管理员提权 / 非交互环境常不在 PATH**：它是 App Execution Alias，定位除 `Get-Command winget.exe` 外，需回退到 `$env:LOCALAPPDATA\Microsoft\WindowsApps\winget.exe`；更稳妥可回退到 `C:\Program Files\WindowsApps\Microsoft.DesktopAppInstaller_*_x64*\winget.exe` 真实二进制。安装用 `--scope machine` 才会落入 `C:\Program Files\PowerShell`；每用户安装则在 `LocalAppData\Microsoft\PowerShell`，查找 `pwsh.exe` 时两者都要覆盖。
+4. **「null 守卫」里直接 `Join-Path $null` 会自爆**：判空之前，不要在同一个 `if` 条件里对可能为空的值调用 `Join-Path` / `Test-Path` 之类带参数绑定的命令。正确写法：先 `if ([string]::IsNullOrWhiteSpace($x)) { 报错收口 }`，通过后再 `Join-Path $x ...`。否则 `$x` 为 `$null` 时 `Join-Path $x` 抛 `Cannot bind argument to parameter 'Path' because it is null`，反而成了新的崩溃点。
+5. **国内网络：GitHub API / raw.githubusercontent 易墙**：原 GitHub 源先调 `api.github.com` 查版本会卡死 / 超时。改为直接用「大版本.0」（如 7.5 → 7.5.0）拼下载链接，并加 `ghproxy` 镜像（`https://mirror.ghproxy.com/https://...`）回退；下载失败给出「github.com 可达性」诊断，而非含糊的空值崩溃。
+6. **编码：脚本源文件一律 UTF-8 无 BOM**（与 IDEA 统一）；程序侧 `EncodingHelper` 检测 + `.NET File.ReadAllText` 已兼容无 BOM 与带 BOM 两种，脚本侧无需特殊处理。注意 AI 生成文件也要保持无 BOM，否则中文 Windows + GBK 解析会误报语法错误。
+7. **（来自 `src/CmdScriptRewriter.cs` 的实机坑）CMD 中文重写必须逐行全覆盖**：程序对 CMD 中文做编码重写时要逐行处理、不能跳过注释行，否则会漏改导致乱码。
+

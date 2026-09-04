@@ -1,3 +1,4 @@
+# 更新时间: 2026-09-04
 # PowerShell 7 (pwsh) 示例脚本：输出 Hello World 并回显传入的参数
 # 运行参数：-Name <值>，默认 World
 param(
@@ -20,3 +21,4 @@ for ($i = 0; $i -lt $codes.Count; $i += 2) {
     $name = $codes[$i + 1]
     Write-Host "$esc[${code}m这是一行“${code}”日志（$name）$esc[0m"
 }
+

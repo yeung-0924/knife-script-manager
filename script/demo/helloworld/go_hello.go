@@ -1,4 +1,5 @@
 package main
+// 更新时间: 2026-09-04
 
 import (
 	"fmt"
@@ -69,3 +70,4 @@ func workingDir() string {
 	}
 	return wd
 }
+

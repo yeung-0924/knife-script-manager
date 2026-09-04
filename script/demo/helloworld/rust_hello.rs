@@ -1,3 +1,4 @@
+// 更新时间: 2026-09-04
 use std::env;
 
 // 颜色（ANSI 转义，Windows 10+ 终端原生支持）
@@ -58,3 +59,4 @@ fn working_dir() -> String {
         .map(|p| p.display().to_string())
         .unwrap_or_else(|_| "<未知>".to_string())
 }
+

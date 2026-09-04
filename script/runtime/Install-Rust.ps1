@@ -1,3 +1,4 @@
+# 更新时间: 2026-09-04
 # Install-Rust.ps1 - 从 static.rust-lang.org 下载并安装 Rust（官方 toolchain zip，解压即用）
 # 说明（与 Install-Java.ps1 / Install-Python.ps1 同一套约定）：
 #   1) 统一用 Write-Output 输出（走 success stream / stdout），避免重定向场景下日志丢失。
@@ -450,3 +451,4 @@ if ($AddToPath -eq '是') {
 }
 SayC $YELLOW '提示' 'MSVC 版 rustc 依赖 VC++ 运行库；若本机未装过 Visual Studio 或 vc_redist，编译时可能提示缺少 dll'
 Say '=========================================='
+

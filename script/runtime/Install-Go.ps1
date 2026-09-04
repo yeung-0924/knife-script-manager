@@ -1,3 +1,4 @@
+# 更新时间: 2026-09-04
 # Install-Go.ps1 - 从 go.dev 下载并安装 Go（官方 zip 解压即用）
 # 说明（与 Install-Java.ps1 / Install-Python.ps1 同一套约定）：
 #   1) 统一用 Write-Output 输出（走 success stream / stdout），避免重定向场景下日志丢失。
@@ -422,3 +423,4 @@ if ($AddToPath -eq '是') {
     SayC $YELLOW '信息' "环境变量已写入【$scope 级】，新打开的终端才会生效"
 }
 Say '=========================================='
+

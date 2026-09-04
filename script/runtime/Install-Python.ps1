@@ -1,3 +1,4 @@
+# 更新时间: 2026-09-04
 # Install-Python.ps1 - 自动安装 Python，支持两种下载源：
 #   A) 华为云镜像（默认，国内直连快）：下载 python.org 官方安装器并静默安装（/quiet），
 #      路径 https://mirrors.huaweicloud.com/python/<版本>/python-<版本>-<架构>.exe
@@ -580,3 +581,4 @@ if ($AddToPath -eq '是') {
     SayC $YELLOW '信息' "环境变量已写入【$scope 级】，新打开的终端才会生效"
 }
 Say '=========================================='
+

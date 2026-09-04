@@ -1,4 +1,5 @@
 @echo off
+rem 更新时间: 2026-09-04
 rem CMD 示例脚本：输出 Hello World 并回显传入的参数
 rem 运行参数：-Name <值>，默认 World
 set "NAME=World"
@@ -41,3 +42,4 @@ echo %ESC%[94m这是一行"94"日志（亮蓝）%ESC%[0m
 echo %ESC%[95m这是一行"95"日志（亮品红）%ESC%[0m
 echo %ESC%[96m这是一行"96"日志（亮青）%ESC%[0m
 echo %ESC%[97m这是一行"97"日志（亮白）%ESC%[0m
+

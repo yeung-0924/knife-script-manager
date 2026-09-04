@@ -1,4 +1,5 @@
 #!/usr/bin/env node
+# 更新时间: 2026-09-04
 // Node.js 外部依赖测试：验证 lib/node 约定子目录能被脚本发现并加载。
 // 约定：第三方依赖必须放到 lib/node/（放 lib/node1 等错误目录名不生效）。
 // 运行时已注入环境变量 SCRIPT_MANAGER_LIB 指向 lib/ 根目录，脚本自行拼子目录。
@@ -36,3 +37,4 @@ if (nodeLib && require("fs").existsSync(nodeLib)) {
 }
 
 console.log(`Hello, ${args.Name}! Node 依赖约定目录验证完成 ✔`);
+

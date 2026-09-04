@@ -1,4 +1,5 @@
 @echo off
+rem 更新时间: 2026-09-04
 REM 网络连通性测试（ICMP 或 TCP 端口）。
 REM 占位符：_p{HOST} - 目标主机（IPv4 或域名，必填）
 REM         _p{PORT} - 目标端口（选填；填写后改为 TCP 测试，否则做 ICMP 测试）
@@ -139,3 +140,4 @@ if "%TEST_OK%"=="1" (
 )
 echo %GREEN%[结果] %TARGET%:%PORT% TCP 端口不通（解析 IP: !RESOLVED_IP!）%RESET%
 exit /b 1
+
