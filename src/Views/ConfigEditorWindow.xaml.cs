@@ -148,26 +148,17 @@ public partial class ConfigEditorWindow : Window
         }
     }
 
-    /// <summary>一键还原默认值：把各项清为「未自定义」（空白），由 AppConfig 回落到内置相对默认；立即写盘并刷新缓存。</summary>
+    /// <summary>
+    /// 一键还原默认值：仅把弹窗内的草稿字段清为「未自定义」（空白），由 AppConfig 在保存后回落到内置相对默认。
+    /// 注意：本方法<b>不写盘</b>——与每行的「×」清除按钮语义一致，也符合带「保存/取消」按钮的模态框约定：
+    /// 只有点击「保存」才会真正落盘生效（含缓存目录迁移与左侧树重建），点「取消」则丢弃本次还原。
+    /// 这样点「默认值」后直接「取消」，磁盘配置与脚本树都不会被改动。
+    /// </summary>
     private void BtnReset_Click(object sender, RoutedEventArgs e)
     {
-        try
-        {
-            foreach (var row in _rows)
-            {
-                row.Value = "";
-                AppConfig.SetRawValue("script", row.Key, "");
-            }
-            _timeout.Value = "";
-            AppConfig.SetRawValue("script", "default_timeout", "");
-            AppConfig.Reload();
-            // 还原默认值同样可能把 cache_dir 改回内置默认，即时迁移 + 刷新图标，避免重启
-            ApplyLiveEffects();
-        }
-        catch (System.Exception ex)
-        {
-            System.Diagnostics.Debug.WriteLine("还原默认值失败：" + ex.Message);
-        }
+        foreach (var row in _rows)
+            row.Value = "";
+        _timeout.Value = "";
     }
 
     /// <summary>清除单行自定义：置空即回落到默认相对路径（占位符随之显示）。</summary>
