@@ -57,15 +57,16 @@ public static class FolderCustomizer
     // 模板文件名统一为 desktop.template{N}.ini（N=0~11，与 F:\!config\templateN 对应）
     private static string TemplateFile(int iconIndex) => $"desktop.template{iconIndex}.ini";
 
-    // 各标准目录 -> (目录, 图标序号)。仅标准目录本身，不含子目录。
-    private static readonly (string Dir, int Index)[] StandardDirs =
+    // 各标准目录 -> (目录, 图标序号, 悬浮说明 InfoTip)。仅标准目录本身，不含子目录。
+    // 说明文字刻意区分"用户维护"与"程序生成"，让用户一眼知道哪些能改、哪些能删。
+    private static readonly (string Dir, int Index, string Tip)[] StandardDirs =
     {
-        (AppConfig.ConfigDir,   IconIndexConfig), // template0
-        (AppConfig.LogDir,      IconIndexSystem), // template1
-        (AppConfig.CacheDir,    IconIndexSystem), // template1
-        (AppConfig.RuntimeDir,  IconIndexSystem), // template1
-        (AppConfig.LibDir,      IconIndexUser),   // template8
-        (AppConfig.ScriptDir,   IconIndexUser),   // template8
+        (AppConfig.ConfigDir,   IconIndexConfig, "程序配置目录：config.ini 在这里，可编辑修改"),
+        (AppConfig.LogDir,      IconIndexSystem, "运行日志目录：程序自动生成，可安全删除"),
+        (AppConfig.CacheDir,    IconIndexSystem, "缓存目录：程序自动生成，可安全删除"),
+        (AppConfig.RuntimeDir,  IconIndexSystem, "脚本运行时目录：程序自动生成，勿手动改动"),
+        (AppConfig.LibDir,      IconIndexUser,   "依赖库目录：脚本运行所需依赖，按语言分子目录"),
+        (AppConfig.ScriptDir,   IconIndexUser,   "脚本目录：你的脚本都在这里，可自由增删改"),
     };
 
     /// <summary>为全部标准目录套用对应颜色样式。失败仅记调试日志，绝不抛异常影响启动。</summary>
@@ -79,8 +80,8 @@ public static class FolderCustomizer
                 return;
             }
             EnsureIconLibHidden();
-            foreach (var (dir, idx) in StandardDirs)
-                Ensure(dir, idx);
+            foreach (var (dir, idx, tip) in StandardDirs)
+                Ensure(dir, idx, tip);
         }
         catch (Exception ex)
         {
@@ -88,13 +89,13 @@ public static class FolderCustomizer
         }
     }
 
-    private static void Ensure(string dir, int iconIndex)
+    private static void Ensure(string dir, int iconIndex, string infoTip)
     {
         if (string.IsNullOrWhiteSpace(dir)) return;
         try
         {
             Directory.CreateDirectory(dir);
-            WriteDesktopIni(dir, iconIndex);
+            WriteDesktopIni(dir, iconIndex, infoTip);
 
             // 文件夹加 System 属性，使内部 desktop.ini 生效（仅置 System；不改 ReadOnly，避免影响子文件写入）
             var dirAttr = File.GetAttributes(dir);
@@ -107,7 +108,7 @@ public static class FolderCustomizer
         }
     }
 
-    private static void WriteDesktopIni(string dir, int iconIndex)
+    private static void WriteDesktopIni(string dir, int iconIndex, string infoTip)
     {
         var iconLib = Path.Combine(ExeDir, ResDir, IconLibName);
         // 从目标目录指向 exe 同级 config\fColors.icl 的相对路径：
@@ -124,6 +125,10 @@ public static class FolderCustomizer
             template = $"[.ShellClassInfo]\r\nIconFile={IconLibPlaceholder}\r\nIconIndex={iconIndex}\r\n";
 
         var content = template.Replace(IconLibPlaceholder, rel);
+        // 悬浮说明（InfoTip）：按目录性质给提示，让用户一眼知道哪些能改、哪些能删。
+        // 不写进模板，由代码按目录追加，以保持 12 份模板与 F:\!config\templateN 一一对应的纯粹性。
+        if (!string.IsNullOrWhiteSpace(infoTip))
+            content += "InfoTip=" + infoTip + "\r\n";
 
         var iniPath = Path.Combine(dir, DesktopIniName);
         // 按字节写出 UTF-16 LE + BOM（与原始 desktop.ini 编码一致，资源管理器稳定识别）。
