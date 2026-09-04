@@ -278,7 +278,9 @@ Write-Host "接收参数 Name = $Name"
 - **占位符 `_p{NAME}` 与语言自身变量不冲突**：程序只识别 `_p{}`，不会误伤 `${}`、Python f-string、`$Env:XXX` 等原生语法。
 - **PowerShell 里改文件/目录属性、操作受限路径时，优先 `try/catch + ErrorActionPreference='Stop'`**，避免单步失败被静默吞掉。
 - **函数内 `exit 1` 会直接终止整个脚本**（即使以 `$x = Func` 方式调用），不能作为"返回错误"用**。需要让调用方决定是否回退/收口时，函数应 `return $null`（或返回错误对象），由主流程统一判断；否则失败被赋成 `$null` 一路漏到下游，会抛出含糊的「参数绑定为 null」错误。`exit 1` 只适合「脚本必须立即停止」的硬错误（如参数非法）。
-- **PowerShell 7 经 WinGet 安装时，`winget.exe` 是 App Execution Alias，在管理员提权/非交互环境常不在 PATH**。定位时除了 `Get-Command winget.exe`，应回退到 `$env:LOCALAPPDATA\Microsoft\WindowsApps\winget.exe`；且 `--scope machine` 安装才落入 `C:\Program Files\PowerShell`，每用户安装则在 `LocalAppData\Microsoft\PowerShell`，查找 pwsh.exe 时需两者都覆盖。
+- **PowerShell 7 经 WinGet 安装时，`winget.exe` 是 App Execution Alias，在管理员提权/非交互环境常不在 PATH**。定位时除了 `Get-Command winget.exe`，应回退到 `$env:LOCALAPPDATA\Microsoft\WindowsApps\winget.exe`；且 `--scope machine` 安装才落入 `C:\Program Files\PowerShell`，每用户安装则在 `LocalAppData\Microsoft\PowerShell`，查找 pwsh.exe 时需两者都覆盖。更可靠的是直接找 `C:\Program Files\WindowsApps\Microsoft.DesktopAppInstaller_*_x64*\winget.exe` 真实二进制（提权下也能调用）。
+- **「兜底收口」守卫不要把 `$null` 喂给 `Join-Path`**：常见写法 `if ($x -eq $null -or -not (Test-Path (Join-Path $x 'y')))` 在 `$x` 为 `$null` 时仍会先求值 `Join-Path $x 'y'`，抛出 `Cannot bind argument to parameter 'Path' because it is null`（"守卫自爆"）。务必先单独判空：`if ([string]::IsNullOrWhiteSpace($x)) { ...exit }` 通过后再 `Join-Path`。安装 PowerShell 7 脚本曾因此反复崩溃。
+- **GitHub 源的「查版本」步骤（`api.github.com`）在受限网络（如国内）常被墙，会直接卡死整个安装**。优先直接用 `大版本.0`（如 7.5 → 7.5.0）拼下载链接，并准备镜像回退（如 `ghproxy` 类代理），避免依赖 GitHub API。
 
 
 ---

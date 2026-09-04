@@ -6,9 +6,8 @@
 #   1) 统一用 Write-Output 输出（走 success stream / stdout），避免重定向场景下日志丢失。
 #   2) 下载用 HttpWebRequest 流式读取，在主线程每 5 秒打印一次进度。
 #   3) zip 用系统 ZipFile 解压。
-#   4) 版本解析：GitHub 源通过 api.github.com 查 PowerShell/PowerShell 的 releases，匹配所选大版本（如 7.5）的最新稳定补丁版
-#      （排除 preview/rc 等预发布；stable 的 tag 形如 v7.5.0）；Microsoft 源通过 WinGet（Microsoft.PowerShell）安装，
-#      版本固定为所选大版本的 .0 正式版（如 7.5.0），二进制来自微软官方渠道。
+#   4) 版本解析：GitHub 源直接使用所选大版本的首个稳定版（如 7.5 → 7.5.0），不再依赖 api.github.com（受限网络常被墙）；
+#      Microsoft 源通过 WinGet（Microsoft.PowerShell）安装，版本固定为所选大版本的 .0 正式版（如 7.5.0），二进制来自微软官方渠道。
 #   5) 覆盖原文件=否（默认）：安装目录已有同大版本 PowerShell 目录时跳过下载解压直接复用；=是 则先删再装。
 #   6) PATH 通过 SCRIPT_MANAGER_ENV 聚合变量统一管理：Path 写入实际路径（CMD 不展开自定义 %VAR% 引用），
 #      SCRIPT_MANAGER_ENV 单独保留作为聚合记录。
@@ -30,6 +29,64 @@ $ESC = [char]27
 $GREEN = "$ESC[92m"; $YELLOW = "$ESC[93m"; $RED = "$ESC[91m"; $RESET = "$ESC[0m"
 function Say { param([string]$Text = '') Write-Output $Text }
 function SayC { param([string]$Color, [string]$Tag, [string]$Text) Write-Output "$Color[$Tag]$RESET $Text" }
+
+# ---- 通用下载（流式 + 进度），供 GitHub 源使用；失败返回 $false 而非抛异常 ----
+function Invoke-DownloadFile {
+    param([string]$Url, [string]$Dest)
+    try {
+        $req = [System.Net.HttpWebRequest]::Create($Url)
+        $req.Timeout = 60000
+        $req.UserAgent = 'knife-script-manager'
+        $resp = $req.GetResponse()
+        $total = $resp.ContentLength
+        $stream = $resp.GetResponseStream()
+        $fs = New-Object System.IO.FileStream($Dest, [System.IO.FileMode]::Create, [System.IO.FileAccess]::Write)
+        $buffer = New-Object byte[] (1024 * 256)
+        $read = 0
+        $nextReport = [DateTime]::Now.AddSeconds(5)
+        SayC $YELLOW '信息' "开始下载（共 $([math]::Round($total / 1MB, 1)) MB）"
+        while (($n = $stream.Read($buffer, 0, $buffer.Length)) -gt 0) {
+            $fs.Write($buffer, 0, $n); $read += $n
+            if ([DateTime]::Now -ge $nextReport) {
+                if ($total -gt 0) {
+                    $pct = [int](($read * 100) / $total)
+                    SayC $YELLOW '信息' "下载进度: $pct%（$([math]::Round($read / 1MB, 1)) / $([math]::Round($total / 1MB, 1)) MB）"
+                } else {
+                    SayC $YELLOW '信息' "下载进度: 已下载 $([math]::Round($read / 1MB, 1)) MB"
+                }
+                $nextReport = [DateTime]::Now.AddSeconds(5)
+            }
+        }
+        $fs.Close(); $stream.Close(); $resp.Close()
+        return $true
+    } catch {
+        SayC $RED '异常' "下载失败: $($_.Exception.Message)"
+        return $false
+    }
+}
+
+# ---- 定位 winget.exe：多层回退，提权/非交互环境下也能找到 ----
+function Find-WingetExe {
+    # 1) PATH 中的 winget（非提权常可用）
+    try {
+        $c = Get-Command winget.exe -ErrorAction SilentlyContinue
+        if ($c) { return $c.Source }
+    } catch { }
+    # 2) App Execution Alias（每用户 WindowsApps，非提权可用；提权下可能失效，仅作兜底）
+    $alias = Join-Path $env:LOCALAPPDATA 'Microsoft\WindowsApps\winget.exe'
+    if (Test-Path $alias) { return $alias }
+    # 3) 真实二进制：WindowsApps 下的 DesktopAppInstaller 包目录（提权下可被调用，最可靠）
+    $waRoot = Join-Path $env:ProgramFiles 'WindowsApps'
+    if (Test-Path $waRoot) {
+        $pkgs = Get-ChildItem -Path $waRoot -Directory -Filter 'Microsoft.DesktopAppInstaller_*_x64*' -ErrorAction SilentlyContinue |
+            Sort-Object Name -Descending | Select-Object -First 1
+        if ($pkgs) {
+            $real = Join-Path $pkgs.FullName 'winget.exe'
+            if (Test-Path $real) { return $real }
+        }
+    }
+    return $null
+}
 
 # ---- 入参（工具在执行前把 _p{XXX} 占位符替换为用户的输入值）----
 $InstallDir     = "_p{INSTALL_DIR}"
@@ -142,68 +199,28 @@ function Install-ViaGitHub {
         }
     }
 
-    # ---- 通过 GitHub API 查该大版本的最新稳定 release（排除 preview/rc 预发布）----
+    # ---- 版本推导：给定大版本（如 7.5）直接使用该系列首个稳定版（如 7.5.0）----
+    # 不依赖 api.github.com（受限网络常被墙），避免「查询版本」这一步就失败
     [Net.ServicePointManager]::SecurityProtocol = [Net.SecurityProtocolType]::Tls12
-    $downloadUrl = $null
-    $pwshVer = $null
-    SayC $YELLOW '信息' "从 GitHub 查询 PowerShell $Major 的最新稳定版本..."
-    try {
-        $releases = Invoke-RestMethod -Uri 'https://api.github.com/repos/PowerShell/PowerShell/releases?per_page=100' `
-            -Headers @{ 'User-Agent' = 'knife-script-manager' } -TimeoutSec 30
-        $hit = $releases | Where-Object {
-            $_.prerelease -eq $false -and $_.tag_name -like "v$Major.*"
-        } | Select-Object -First 1
-        if (-not $hit) {
-            SayC $RED '异常' "未找到 PowerShell $Major 的稳定 release，请确认大版本号（如 7.5 / 7.4 / 7.2）"
-            return $null
-        }
-        $pwshVer = $hit.tag_name.TrimStart('v')
-        $downloadUrl = "https://github.com/PowerShell/PowerShell/releases/download/v$pwshVer/PowerShell-$pwshVer-win-$pwshArch.zip"
-    } catch {
-        SayC $RED '异常' "查询 PowerShell 版本信息失败: $($_.Exception.Message)"
-        SayC $RED '异常' '请检查网络（需可访问 GitHub API），或稍后重试'
-        return $null
-    }
-    SayC $YELLOW '信息' "PowerShell 版本: $pwshVer，下载链接: $downloadUrl"
+    $pwshVer = "$Major.0"
+    SayC $YELLOW '信息' "PowerShell 版本: $pwshVer（大版本 $Major 的首个稳定版）"
 
-    # ---- 下载（流式 + 进度）----
+    # ---- 下载（流式 + 进度；主源 GitHub + 镜像回退，提升受限网络下的成功率）----
     $tmpDir = Join-Path $env:TEMP 'script-manager-pwsh'
     if (-not (Test-Path $tmpDir)) { New-Item -ItemType Directory -Path $tmpDir -Force | Out-Null }
-
-    $fs = $null
     $zipPath = Join-Path $tmpDir "PowerShell-$pwshVer-win-$pwshArch.zip"
-    try {
-        $req = [System.Net.HttpWebRequest]::Create($downloadUrl)
-        $req.Timeout = 60000
-        $req.UserAgent = 'knife-script-manager'
-        $resp = $req.GetResponse()
-        $total = $resp.ContentLength
-        $stream = $resp.GetResponseStream()
-        $fs = New-Object System.IO.FileStream($zipPath, [System.IO.FileMode]::Create, [System.IO.FileAccess]::Write)
-        $buffer = New-Object byte[] (1024 * 256)
-        $read = 0
-        $nextReport = [DateTime]::Now.AddSeconds(5)
-        SayC $YELLOW '信息' "开始下载: PowerShell-$pwshVer-win-$pwshArch.zip（约 $([math]::Round($total / 1MB, 1)) MB）"
-        while (($n = $stream.Read($buffer, 0, $buffer.Length)) -gt 0) {
-            $fs.Write($buffer, 0, $n)
-            $read += $n
-            if ([DateTime]::Now -ge $nextReport) {
-                if ($total -gt 0) {
-                    $pct = [int](($read * 100) / $total)
-                    SayC $YELLOW '信息' "下载进度: $pct%（$([math]::Round($read / 1MB, 1)) / $([math]::Round($total / 1MB, 1)) MB）"
-                } else {
-                    SayC $YELLOW '信息' "下载进度: 已下载 $([math]::Round($read / 1MB, 1)) MB"
-                }
-                $nextReport = [DateTime]::Now.AddSeconds(5)
-            }
-        }
-        $fs.Close(); $fs = $null
-        $stream.Close()
-        $resp.Close()
-    } catch {
-        if ($fs) { $fs.Close() }
-        SayC $RED '异常' "下载失败: $($_.Exception.Message)"
-        SayC $RED '异常' '请检查网络（需可访问 GitHub），或确认该版本包可用'
+
+    $primaryUrl = "https://github.com/PowerShell/PowerShell/releases/download/v$pwshVer/PowerShell-$pwshVer-win-$pwshArch.zip"
+    $mirrorUrl  = "https://mirror.ghproxy.com/https://github.com/PowerShell/PowerShell/releases/download/v$pwshVer/PowerShell-$pwshVer-win-$pwshArch.zip"
+    $mirrorUrl2 = "https://ghproxy.net/https://github.com/PowerShell/PowerShell/releases/download/v$pwshVer/PowerShell-$pwshVer-win-$pwshArch.zip"
+    $urls = @($primaryUrl, $mirrorUrl, $mirrorUrl2)
+    $ok = $false
+    foreach ($u in $urls) {
+        SayC $YELLOW '信息' "尝试下载源: $u"
+        if (Invoke-DownloadFile -Url $u -Dest $zipPath) { $ok = $true; break }
+    }
+    if (-not $ok) {
+        SayC $RED '异常' '所有下载源均失败：请检查网络（需可访问 GitHub 或其镜像），或手动下载便携 zip 后解压'
         return $null
     }
     SayC $GREEN '结果' "下载完成: $zipPath"
@@ -261,16 +278,8 @@ function Find-WinGetPwsh {
 # 返回解压/安装出的 PowerShell 目录绝对路径；失败（winget 缺失/安装异常/未找到）返回 $null，由调用方决定回退
 function Install-ViaWinGet {
     param([string]$Major)
-    # 定位 winget.exe：提权/非交互环境下 App Execution Alias 常不在 PATH，需回退到已知路径
-    $wingetExe = $null
-    try {
-        $c = Get-Command winget.exe -ErrorAction SilentlyContinue
-        if ($c) { $wingetExe = $c.Source }
-    } catch { }
-    if (-not $wingetExe) {
-        $alias = Join-Path $env:LOCALAPPDATA 'Microsoft\WindowsApps\winget.exe'
-        if (Test-Path $alias) { $wingetExe = $alias }
-    }
+    # 定位 winget.exe：多层回退（PATH → App Execution Alias → WindowsApps 内真实二进制），提权下也能找到
+    $wingetExe = Find-WingetExe
     if (-not $wingetExe) {
         SayC $RED '异常' '未找到 winget.exe（Microsoft 源依赖 WinGet 安装 PowerShell），请先安装「应用安装程序(App Installer)」'
         SayC $YELLOW '信息' '可改用「下载源=GitHub」；或手动安装 App Installer 后重试'
@@ -281,7 +290,7 @@ function Install-ViaWinGet {
     SayC $YELLOW '信息' '注：WinGet 安装至系统 PowerShell 目录（默认 C:\Program Files\PowerShell\7），将忽略自定义安装目录'
     try {
         $p = Start-Process -FilePath $wingetExe -ArgumentList @(
-            'install', '--id', 'Microsoft.PowerShell', '--version', $wingetVer,
+            'install', '--id', 'Microsoft.PowerShell', '--source', 'winget', '--version', $wingetVer,
             '--scope', 'machine',
             '--accept-package-agreements', '--accept-source-agreements', '--silent'
         ) -Wait -PassThru -WindowStyle Hidden
@@ -414,14 +423,28 @@ if ($DownloadSource -ieq 'Microsoft') {
     }
 }
 
-# ---- 兜底收口：两种下载源均未取得可用 pwsh 目录时，给出明确错误而非含糊的空值崩溃 ----
-if ([string]::IsNullOrWhiteSpace($pwshHome) -or -not (Test-Path (Join-Path $pwshHome 'pwsh.exe'))) {
+# ---- 兜底收口：两种下载源均未取得可用 pwsh 目录时，给出明确错误 + 诊断，绝不把 $null 传给 Join-Path ----
+if ([string]::IsNullOrWhiteSpace($pwshHome)) {
     if ($DownloadSource -ieq 'Microsoft') {
         SayC $RED '异常' "PowerShell $major 安装失败：Microsoft(WinGet) 源与 GitHub 回退均未能产出可用的 pwsh.exe"
     } else {
         SayC $RED '异常' "PowerShell $major 安装失败：GitHub 下载源未能产出可用的 pwsh.exe"
     }
-    SayC $RED '异常' "排查建议：① 确认本机已安装「应用安装程序(App Installer)」且可联网；② 或改用「下载源=GitHub」并确保可访问 github.com；③ 亦可手动从 https://github.com/PowerShell/PowerShell/releases 下载便携 zip 解压"
+    # 诊断：帮助定位是 winget 缺失还是网络不可达（受限网络下 GitHub 常被墙，可改用 Microsoft 源或镜像）
+    $wg = Find-WingetExe
+    SayC $YELLOW '诊断' "winget.exe: $(if ($wg) { $wg } else { '未找到' })"
+    try {
+        $gh = Invoke-WebRequest -Uri 'https://github.com' -TimeoutSec 8 -UseBasicParsing -ErrorAction Stop
+        SayC $YELLOW '诊断' "github.com 访问: 可达 (HTTP $($gh.StatusCode))"
+    } catch {
+        SayC $YELLOW '诊断' "github.com 访问: 不可达 ($($_.Exception.Message))"
+    }
+    SayC $RED '异常' "排查建议：① 确认本机已安装「应用安装程序(App Installer)」且可联网；② 或改用「下载源=GitHub」并确保可访问 github.com（含镜像）；③ 亦可手动从 https://github.com/PowerShell/PowerShell/releases 下载便携 zip 解压"
+    exit 1
+}
+$pwshExe = Join-Path $pwshHome 'pwsh.exe'
+if (-not (Test-Path $pwshExe)) {
+    SayC $RED '异常' "安装目录存在但缺少 pwsh.exe: $pwshHome"
     exit 1
 }
 
