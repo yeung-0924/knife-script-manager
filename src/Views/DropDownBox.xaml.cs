@@ -1,6 +1,7 @@
 using System.Collections;
 using System.Windows;
 using System.Windows.Controls;
+using System.Windows.Input;
 using System.Windows.Interop;
 using System.Runtime.InteropServices;
 
@@ -94,6 +95,7 @@ public partial class DropDownBox : UserControl
     {
         InitializeComponent();
         Popup.Opened += Popup_Opened;
+        Loaded += DropDownBox_Loaded;
     }
 
     private void Input_PreviewMouseDown(object sender, System.Windows.Input.MouseButtonEventArgs e)
@@ -123,6 +125,28 @@ public partial class DropDownBox : UserControl
         // 只有用户真正从下拉列表选择时才把焦点拉回输入框；VM 初始化同步时不抢焦点。
         if (!_syncingListSelection)
             Input.Focus();
+    }
+
+    // 取得所属窗口并订阅其 PreviewMouseDown：实现"点击下拉框输入框 / 弹出列表之外的任意位置即收起"。
+    // 弹出层在独立可视树中，其点击不会冒泡到本窗口，故点选项天然不会触发此关闭。
+    private void DropDownBox_Loaded(object sender, RoutedEventArgs e)
+    {
+        var win = Window.GetWindow(this);
+        if (win != null)
+            win.PreviewMouseDown += Window_PreviewMouseDown;
+    }
+
+    private void Window_PreviewMouseDown(object sender, MouseButtonEventArgs e)
+    {
+        if (!Popup.IsOpen)
+            return;
+        // 点在输入框或弹出列表内 → 不收起
+        if (Input.IsMouseOver)
+            return;
+        if (Popup.Child != null && Popup.Child.IsMouseOver)
+            return;
+        // 其它任意位置 → 收起
+        Popup.IsOpen = false;
     }
 
     // 修正：WPF 的 Popup 弹出层是独立 HWND 且默认带 WS_EX_TOPMOST，
