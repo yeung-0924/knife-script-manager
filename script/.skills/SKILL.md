@@ -269,6 +269,18 @@ Write-Host "接收参数 Name = $Name"
 
 ---
 
+## 九、常见坑（避坑清单）
+
+- **不要把 PowerShell 只读/自动变量当普通变量赋值**，否则直接抛 `Cannot overwrite variable XXX because it is read-only or constant`、脚本中断。曾踩：`$home`（用户主目录，自动变量）被误用作局部变量名 → 安装 PowerShell 7 的脚本崩溃。同理规避这些保留名：
+  - `$HOME`、`$PWD`、`$PSHOME`、`$HOST`（PowerShell 7+）、`$PID`、`$PROFILE`、`$PSVERSIONTABLE`、`$EXECUTIONCONTEXT`、`$MYINVOCATION`、`$ARGS`、`$INPUT`、`$MATCHES`、`$NULL`、`$TRUE`、`$FALSE`、`$ERROR`、`$LASTEXITCODE`、`$FOREACH`。
+  - PowerShell 变量名不区分大小写，`$home` 与 `$HOME` 是同一个变量——小写也中招。
+  - 安全做法：局部变量用更具描述性的名字（如 `$pwshHome`、`$installDir`），避开上述保留名。
+- **占位符 `_p{NAME}` 与语言自身变量不冲突**：程序只识别 `_p{}`，不会误伤 `${}`、Python f-string、`$Env:XXX` 等原生语法。
+- **PowerShell 里改文件/目录属性、操作受限路径时，优先 `try/catch + ErrorActionPreference='Stop'`**，避免单步失败被静默吞掉。
+
+
+---
+
 ## 九、新增脚本步骤（检查清单）
 
 1. 决定语言 → 按第三节命名文件，放到 `script/` 下合适子目录。
