@@ -7,30 +7,6 @@
         Width="580" SizeToContent="Height"
         WindowStartupLocation="CenterOwner" ResizeMode="NoResize"
         Background="{DynamicResource BrushWindowBg}">
-    <Window.Resources>
-        <!-- 配置值输入框：右侧预留 × 清空按钮的位置。
-             关键在模板里给 PART_ContentHost 加 Margin={TemplateBinding Padding}——
-             ScrollViewer 才是文本的裁剪边界，内缩后长路径会被裁在 × 左侧，不会压到按钮上
-             （与参数面板的文件选择框同一做法）。 -->
-        <Style x:Key="ConfigValueTextBox" TargetType="TextBox">
-            <Setter Property="BorderThickness" Value="0" />
-            <Setter Property="Background" Value="Transparent" />
-            <Setter Property="VerticalContentAlignment" Value="Center" />
-            <Setter Property="Padding" Value="6,0,24,0" />
-            <Setter Property="Template">
-                <Setter.Value>
-                    <ControlTemplate TargetType="TextBox">
-                        <ScrollViewer x:Name="PART_ContentHost"
-                                      Margin="{TemplateBinding Padding}"
-                                      VerticalAlignment="Center"
-                                      Focusable="False"
-                                      Background="Transparent" />
-                    </ControlTemplate>
-                </Setter.Value>
-            </Setter>
-        </Style>
-    </Window.Resources>
-
     <DockPanel Margin="16">
         <TextBlock DockPanel.Dock="Top" Text="{x:Static local:Strings.ConfigEditorNote}"
                    Foreground="{DynamicResource BrushTextSecondary}" TextWrapping="Wrap"
@@ -78,8 +54,9 @@
                                         BorderBrush="{DynamicResource BrushBorder}"
                                         Background="{DynamicResource BrushPanelBg}">
                                     <Grid>
+                                        <!-- ClearableTextBoxInline：边框/背景由外层 Border 绘制，右侧留白给 × 按钮 -->
                                         <TextBox Text="{Binding Value}" IsReadOnly="True"
-                                                 Style="{StaticResource ConfigValueTextBox}" />
+                                                 Style="{StaticResource ClearableTextBoxInline}" />
                                         <!-- 未自定义（Value 为空）时显示的默认相对路径占位符 -->
                                         <TextBlock Text="{Binding Placeholder}"
                                                    Foreground="{DynamicResource BrushPlaceholder}"
@@ -113,7 +90,7 @@
                         BorderBrush="{DynamicResource BrushBorder}" Background="{DynamicResource BrushPanelBg}">
                     <Grid>
                         <TextBox Text="{Binding Value, UpdateSourceTrigger=PropertyChanged}"
-                                 Style="{StaticResource ConfigValueTextBox}"
+                                 Style="{StaticResource ClearableTextBoxInline}"
                                  PreviewTextInput="Timeout_PreviewTextInput" />
                         <TextBlock Text="{Binding Placeholder}"
                                    Foreground="{DynamicResource BrushPlaceholder}" Margin="6,0,0,0"

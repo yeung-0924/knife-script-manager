@@ -10,11 +10,12 @@
                  Cursor="Hand"
                  PreviewMouseDown="Input_PreviewMouseDown"
                  LostFocus="Input_LostFocus"
-                 Padding="2,0,18,0">  <!-- 右侧留空：给外部叠加的「清空」按钮让位，避免文字被遮挡 -->
+                 >
+            <!-- 右侧内边距由 ClearableTextBox 预留：给外部叠加的「清空 ×」按钮让位，避免文字被遮挡 -->
             <!-- IsInvalid（如必填未填写）为 true 时标红。
                  注意：不能靠对外层 UserControl 设 BorderBrush——本控件外观由内部 TextBox 呈现，UserControl 无模板绑定传递该属性。 -->
             <TextBox.Style>
-                <Style TargetType="TextBox" BasedOn="{StaticResource BaseTextBox}">
+                <Style TargetType="TextBox" BasedOn="{StaticResource ClearableTextBox}">
                     <Style.Triggers>
                         <DataTrigger Binding="{Binding IsInvalid, RelativeSource={RelativeSource AncestorType=UserControl}}" Value="True">
                             <Setter Property="BorderBrush" Value="Red" />

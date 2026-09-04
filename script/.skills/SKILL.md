@@ -355,21 +355,27 @@ Write-Host "接收参数 Name = $Name"
 
 12. **长检测 / 耗时脚本要「边做边打印」，不要先攒后喷（2026-09-04 实测 UX 坑）**：`Get-RuntimeEnv.ps1` 原写法在内部把所有语言检测完（逐个 spawn java/node/go/rustc/python 进程，约 10 秒）后才打印第一行，导致用户看到一片空白、以为卡死。`ScriptRunner` 两条路径其实都是流式的（非提权 `BeginOutputReadLine` 异步读 stdout + 提权路径每 250ms 轮询日志文件），瓶颈在脚本侧而非执行器。正确写法：先打印标题与「更新时间」，再在每次检测前打「检测中: X ...」、检测完立即打印该项结果，让用户随时看到进度；不要先收集所有结果、最后一次性 `foreach` 输出。
 
-13. **WPF 输入框内嵌「×」清空按钮：长文本会压在按钮上，光设 `TextBox.Padding` 没用（2026-09-05 实测）**：在 `Grid` 里把 `TextBox` 与右上角 `Button`（如 `ClearButton`）叠放时，输入/回显内容过长会从按钮底下穿过、把 × 盖住只剩半边。**只给 TextBox 设 `Padding` 右值无效**——默认模板里 Padding 只是内容外边距，文本的裁剪边界仍是外层 Border。正确写法：自定义 `TextBox.Template`，把 `PART_ContentHost`（ScrollViewer）的 `Margin` 绑到 `Padding`，ScrollViewer 才是真正的裁剪边界，内缩后长文本会被裁在按钮左侧：
+13. **WPF 输入框内嵌「×」清空按钮：长文本会压在按钮上（2026-09-05 实测）**：在 `Grid` 里把 `TextBox` 与右上角 `Button`（如 `ClearButton`，宽 14 + 右距 4 = 占右侧 18px）叠放时，输入/回显内容过长会从按钮底下穿过、把 × 盖住只剩半边。
+    根因：**文本的裁剪边界是 `PART_ContentHost`（ScrollViewer），不是 TextBox 自身**。所以只有当 Padding 被绑到 ScrollViewer 的 `Margin` 时，加大右内边距才能真正把文本裁在 × 左侧；一旦换成 WPF 默认 TextBox 模板（没有这个绑定），`Padding` 就退化成纯视觉偏移、起不到裁剪作用。
+    本仓库 `BaseTextBox`（`Views/Styles.xaml`）的模板已经做了这个绑定：
     ```xml
-    <Style x:Key="ConfigValueTextBox" TargetType="TextBox">
-        <Setter Property="Padding" Value="6,0,24,0" />   <!-- 右侧留够：× 宽 14 + 右距 4 + 余量 -->
-        <Setter Property="Template">
-            <Setter.Value>
-                <ControlTemplate TargetType="TextBox">
-                    <ScrollViewer x:Name="PART_ContentHost" Margin="{TemplateBinding Padding}"
-                                  VerticalAlignment="Center" Focusable="False" Background="Transparent" />
-                </ControlTemplate>
-            </Setter.Value>
-        </Setter>
+    <Border x:Name="Bd" ...>
+        <ScrollViewer x:Name="PART_ContentHost" Margin="{TemplateBinding Padding}" VerticalAlignment="Center" Focusable="False" />
+    </Border>
+    ```
+    因此**任何要内嵌 × 的输入框，必须 `BasedOn` 一个带该绑定的样式**，并把右内边距留到 ≥24px。现已在 Styles.xaml 收口为两个共用样式，新增同类输入框直接复用，不要再各写一份模板：
+    ```xml
+    <!-- 普通：自带边框（参数面板文本框、参数下拉框） -->
+    <Style x:Key="ClearableTextBox" TargetType="TextBox" BasedOn="{StaticResource BaseTextBox}">
+        <Setter Property="Padding" Value="6,0,24,0" />
+    </Style>
+    <!-- 内嵌式：外层 Border 已画边框（参数面板文件选择框、配置编辑器各行），自身不画避免双线 -->
+    <Style x:Key="ClearableTextBoxInline" TargetType="TextBox" BasedOn="{StaticResource ClearableTextBox}">
+        <Setter Property="BorderThickness" Value="0" />
+        <Setter Property="Background" Value="Transparent" />
     </Style>
     ```
-    要点：① `ScrollViewer` 必须叫 `PART_ContentHost`；② `Background="Transparent"`（不能是 null）否则点击不到、无法聚焦；③ 参数面板文件选择框与配置编辑器均已采用此写法。
+    排查同类问题时的检查清单：① 该输入框是否 `BasedOn` 到含 `Margin="{TemplateBinding Padding}"` 的模板；② 右内边距是否 ≥ × 实际占位（18px）+ 余量；③ 自定义模板里 `ScrollViewer` 必须叫 `PART_ContentHost`，`Background` 要给 `Transparent`（null 会导致点不到、无法聚焦）。
 
 14. **配置编辑器「未自定义」= 空 + 占位符，不要回显默认值（2026-09-05 暮云明确）**：`config.ini` 的语义是「留空 = 用内置默认」，因此编辑弹窗里未自定义项必须显示为空、只用 placeholder 提示内置默认值（如 `script\index.json` / `lib` / `0（不限制）`），**不要把默认值填进输入框**——否则用户会误以为自己改过配置。两个配套要求：① 与内置默认等价的显式配置（`lib_dir = lib`、`default_timeout = 0`）也要按「未自定义」处理，判定需归一化（统一 `\` / 去尾斜杠 / 去 `.\` 前缀 / 忽略大小写），见 `ConfigEditorWindow.xaml.cs` 的 `IsBuiltInDefault` + `NormalizePath`；② 随包的 `config.ini.example` 各项**默认全部注释掉**（`;lib_dir =`），避免新装就带一堆等于默认值的显式行。
 

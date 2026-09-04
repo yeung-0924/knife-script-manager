@@ -429,26 +429,11 @@
                                                             </Style>
                                                         </Border.Style>
                                                         <Grid>
+                                                            <!-- 边框与背景由外层 Border 绘制，输入框本身不画边框（ClearableTextBoxInline）；
+                                                                 右侧内边距由该样式预留给 × 清空按钮，长路径不会压住按钮 -->
                                                             <TextBox Text="{Binding Value, UpdateSourceTrigger=PropertyChanged}"
                                                                      ToolTip="{Binding Placeholder}"
-                                                                     Padding="2,0,10,0" BorderThickness="0" Background="Transparent"
-                                                                     VerticalContentAlignment="Center">
-                                                                <TextBox.Style>
-                                                                    <Style TargetType="TextBox" BasedOn="{StaticResource BaseTextBox}">
-                                                                        <Setter Property="Template">
-                                                                            <Setter.Value>
-                                                                                <ControlTemplate TargetType="TextBox">
-                                                                                    <ScrollViewer x:Name="PART_ContentHost"
-                                                                                                  Margin="{TemplateBinding Padding}"
-                                                                                                  VerticalAlignment="Center"
-                                                                                                  Focusable="False"
-                                                                                                  Background="Transparent" />
-                                                                                </ControlTemplate>
-                                                                            </Setter.Value>
-                                                                        </Setter>
-                                                                    </Style>
-                                                                </TextBox.Style>
-                                                            </TextBox>
+                                                                     Style="{StaticResource ClearableTextBoxInline}" />
                                                             <TextBlock Text="{Binding Placeholder}"
                                                                        Foreground="{DynamicResource BrushPlaceholder}"
                                                                        Margin="6,0,0,0" VerticalAlignment="Center"
@@ -465,10 +450,9 @@
                                                 <Grid Visibility="{Binding IsPath, Converter={x:Static local:InverseBoolToVisibilityConverter.Instance}}">
                                                     <!-- 必填未填写时标红 -->
                                                     <TextBox Text="{Binding Value, UpdateSourceTrigger=PropertyChanged}"
-                                                             ToolTip="{Binding Placeholder}"
-                                                             Padding="2,0,10,0">
+                                                             ToolTip="{Binding Placeholder}">
                                                         <TextBox.Style>
-                                                            <Style TargetType="TextBox" BasedOn="{StaticResource BaseTextBox}">
+                                                            <Style TargetType="TextBox" BasedOn="{StaticResource ClearableTextBox}">
                                                                 <Style.Triggers>
                                                                     <DataTrigger Binding="{Binding IsMissing}" Value="True">
                                                                         <Setter Property="BorderBrush" Value="Red" />
