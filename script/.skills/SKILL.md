@@ -347,4 +347,5 @@ Write-Host "接收参数 Name = $Name"
 5. **国内网络：GitHub API / raw.githubusercontent 易墙**：原 GitHub 源先调 `api.github.com` 查版本会卡死 / 超时。改为直接用「大版本.0」（如 7.5 → 7.5.0）拼下载链接，并加 `ghproxy` 镜像（`https://mirror.ghproxy.com/https://...`）回退；下载失败给出「github.com 可达性」诊断，而非含糊的空值崩溃。
 6. **编码：脚本源文件一律 UTF-8 无 BOM**（与 IDEA 统一）；程序侧 `EncodingHelper` 检测 + `.NET File.ReadAllText` 已兼容无 BOM 与带 BOM 两种，脚本侧无需特殊处理。注意 AI 生成文件也要保持无 BOM，否则中文 Windows + GBK 解析会误报语法错误。
 7. **（来自 `src/CmdScriptRewriter.cs` 的实机坑）CMD 中文重写必须逐行全覆盖**：程序对 CMD 中文做编码重写时要逐行处理、不能跳过注释行，否则会漏改导致乱码。
+8. **Go / Rust 模板不能用固定文件名 `//go:embed` / `include_str!` 内嵌自身源码来打印「更新时间」**：ScriptManager 运行时会把脚本写成随机临时文件 `se_script_{Guid}.go` / `se_script_{Guid}.rs`（见 `MainViewModel.cs` 的 `Path.GetTempPath()` + `LangToTempExt`），再 `go run` / `rustc` 执行。embed/include_str! 的文件名在编译期就必须存在，而临时文件名是随机 GUID，必然报「no matching files / cannot find file」。正确写法：Go 用 `runtime.Caller(0)` 取自身源码路径再解析；Rust 用 `std::env::current_exe().with_extension("rs")` 定位同目录同名 `.rs` 源码（并兜底扫描 exe 所在目录所有 `.rs`）。两者均不依赖文件真实名字，改名 / 随机名都照常工作。
 
