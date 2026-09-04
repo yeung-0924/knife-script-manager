@@ -1,4 +1,4 @@
-﻿# Install-Powershell7.ps1 - 安装 PowerShell 7（含 pwsh.exe）
+# Install-Powershell7.ps1 - 安装 PowerShell 7（含 pwsh.exe）
 #   下载源（DOWNLOAD_SOURCE）：
 #     Microsoft = 通过 WinGet（Microsoft.PowerShell）从微软官方渠道安装（默认，二进制来自微软 CDN，系统级目录）
 #     GitHub    = 从 GitHub 下载官方「解压即用」zip 包到自定义 runtime 目录（与 Install-Node 同套约定）
