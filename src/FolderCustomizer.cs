@@ -12,16 +12,16 @@ namespace ScriptManager;
 /// 会按 desktop.ini 的 <c>IconFile</c>/<c>IconIndex</c> 显示该文件夹图标。
 /// </para>
 /// <para>
-/// 资源（保留在源码 <c>assets/</c> 目录，由 build.ps1 随构建复制到 exe 同级的 <c>assets\</c>，
-/// <b>不进 config\ 用户可编辑区</b>——fColors.icl 不是给用户改的文件，放程序侧的 assets\ 最干净）：
+/// 资源（源码在 <c>assets/</c>，由 build.ps1 随构建复制到 exe 同级的 <c>config\</c> 并设为 Hidden——
+/// 交付目录里不再额外留一个 <c>assets\</c>；隐藏后也不干扰用户查看 <c>config\config.ini</c>）：
 /// <list type="bullet">
-///   <item>fColors.icl 图标库 → exe 同级 <c>assets\fColors.icl</c></item>
-///   <item>三份 desktop.ini 模板（config/index0、generic/index6、script/index8）→ exe 同级 <c>assets\folder-icons\</c></item>
+///   <item>fColors.icl 图标库 → exe 同级 <c>config\fColors.icl</c>（Hidden）</item>
+///   <item>三份 desktop.ini 模板（config/index0、generic/index6、script/index8）→ exe 同级 <c>config\folder-icons\</c>（Hidden）</item>
 /// </list>
-/// 运行期：① 检查 <c>assets\fColors.icl</c> 是否存在（缺失则文件夹变色不可用，但不影响启动）；
-/// ② 按各标准目录的模板，把其中的占位符 <c>{{ICONLIB}}</c> 替换为指向 <c>assets\fColors.icl</c> 的相对路径
-/// （用 <see cref="Path.GetRelativePath"/> 动态计算，目录被用户改位置也能正确指向），写出为该目录的 desktop.ini
-/// （UTF-16 LE+BOM + Hidden+System）。
+/// 运行期：① 检查 <c>config\fColors.icl</c> 是否存在（缺失则文件夹变色不可用，但不影响启动）；
+/// ② 按各标准目录的模板，把其中的占位符 <c>{{ICONLIB}}</c> 替换为指向 <c>config\fColors.icl</c> 的相对路径
+/// （用 <see cref="Path.GetRelativePath"/> 动态计算，目录被用户改位置也能正确指向；同目录时补 <c>.\</c> 前缀，
+/// 与 Windows 原生 desktop.ini 的写法一致），写出为该目录的 desktop.ini（UTF-16 LE+BOM + Hidden+System）。
 /// 图标序号对齐 F:\!config：template6=6（通用系统目录）、template8=8（script 目录）、顶层=0（config 目录自身）。
 /// </para>
 /// <para>任何异常均被吞掉并记调试日志，绝不影响主程序启动。</para>
@@ -33,16 +33,16 @@ public static class FolderCustomizer
     private const int IconIndexScript = 8;  // script
     private const int IconIndexConfig = 0;  // config（图标库所在目录）
 
-    // 资源在 exe 同级的位置（由 build.ps1 从 assets/ 复制而来，非用户可编辑区）
-    private const string AssetsRelDir = "assets";
-    private const string FolderIconsRelDir = "assets\\folder-icons";
+    // 资源在 exe 同级 config\ 下的位置（由 build.ps1 从 assets/ 复制而来并设为 Hidden）
+    private const string ResDir = "config";
+    private const string FolderIconsRelDir = "config\\folder-icons";
     private const string IconLibName = "fColors.icl";
     private const string DesktopIniName = "desktop.ini";
     private const string IconLibPlaceholder = "{{ICONLIB}}";
 
     private static readonly string ExeDir =
         Path.GetDirectoryName(Environment.ProcessPath) ?? AppContext.BaseDirectory;
-    private static readonly string IconLibPath = Path.Combine(ExeDir, AssetsRelDir, IconLibName);
+    private static readonly string IconLibPath = Path.Combine(ExeDir, ResDir, IconLibName);
     private static readonly string TemplatesDir = Path.Combine(ExeDir, FolderIconsRelDir);
 
     // 各标准目录 -> (目录, 模板文件名, 图标序号)
@@ -97,9 +97,11 @@ public static class FolderCustomizer
 
     private static void WriteDesktopIni(string dir, string tplFile, int iconIndex)
     {
-        var iconLib = Path.Combine(ExeDir, AssetsRelDir, IconLibName);
-        // 从目标目录指向 exe 同级 assets\fColors.icl 的相对路径（标准目录均为 exe 的下一级，故得到 ..\assets\fColors.icl）
+        var iconLib = Path.Combine(ExeDir, ResDir, IconLibName);
+        // 从目标目录指向 exe 同级 config\fColors.icl 的相对路径：
+        // log/cache/lib/runtime/script 得到 ..\config\fColors.icl；config 自身为同目录，补 .\ 前缀得 .\fColors.icl
         var rel = Path.GetRelativePath(dir, iconLib).Replace('/', '\\');
+        if (!rel.StartsWith(".")) rel = ".\\" + rel;
 
         var tplPath = Path.Combine(TemplatesDir, tplFile);
         string template;
@@ -121,7 +123,7 @@ public static class FolderCustomizer
         File.SetAttributes(iniPath, FileAttributes.Hidden | FileAttributes.System);
     }
 
-    // 让 exe 同级的 assets\fColors.icl 仅带 Hidden 属性（不显眼地躺在程序侧；不加 System，避免影响引用/删除）
+    // 确保 exe 同级 config\fColors.icl 带 Hidden 属性（不显眼地躺在 config\ 里；不加 System，避免影响引用/删除）
     private static void EnsureIconLibHidden()
     {
         try
