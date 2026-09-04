@@ -5,6 +5,7 @@ using System.Windows.Controls;
 using System.Windows.Input;
 using Microsoft.Win32;
 using ScriptManager.Utils;
+using ScriptManager.ViewModels;
 
 namespace ScriptManager.Views;
 
@@ -22,6 +23,9 @@ public partial class ConfigEditorWindow : Window
     private readonly List<ConfigRow> _rows = new();
     // 默认执行超时(秒)：唯一可手输字段，空白 = 不限制（0）。
     private readonly TimeoutRow _timeout = new();
+
+    /// <summary>宿主主窗口的视图模型，保存后用于触发左侧目录树按新脚本索引重建；可为 null（防御性）。</summary>
+    public MainViewModel? OwnerViewModel { get; set; }
 
     public ConfigEditorWindow()
     {
@@ -105,10 +109,17 @@ public partial class ConfigEditorWindow : Window
     {
         try
         {
+            // 保存前记录当前脚本索引路径，便于判断本次是否改动了它
+            var oldIndex = AppConfig.ScriptIndexJsonPath;
             foreach (var row in _rows)
                 AppConfig.SetRawValue("script", row.Key, row.Value.Trim());
             AppConfig.SetRawValue("script", "default_timeout", SanitizeTimeout(_timeout.Value));
             AppConfig.Reload();
+            // 若脚本索引文件被改动，左侧目录树需按新索引重新渲染（与「文件▸打开」同源）
+            if (!string.Equals(oldIndex, AppConfig.ScriptIndexJsonPath, System.StringComparison.OrdinalIgnoreCase))
+                OwnerViewModel?.ReloadTree();
+            // 保存成功后关闭弹窗
+            Close();
         }
         catch (System.Exception ex)
         {

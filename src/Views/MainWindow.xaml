@@ -31,10 +31,6 @@
                 BorderBrush="{DynamicResource BrushBorder}" BorderThickness="0,0,0,1">
             <Menu Background="Transparent" Foreground="{DynamicResource BrushText}" Padding="4,2">
                 <MenuItem Header="{x:Static local:Strings.MenuFile}">
-                    <MenuItem.Icon>
-                        <svgc:SvgViewbox Width="12" Height="12"
-                                         UriSource='pack://application:,,,/assets/images/button/file.svg' />
-                    </MenuItem.Icon>
                     <MenuItem Command="{Binding OpenFolderCommand}"
                               Header="{x:Static local:Strings.BtnOpen}">
                         <MenuItem.Icon>
@@ -51,10 +47,6 @@
                     </MenuItem>
                 </MenuItem>
                 <MenuItem Header="{x:Static local:Strings.MenuSettings}">
-                    <MenuItem.Icon>
-                        <svgc:SvgViewbox Width="12" Height="12"
-                                         UriSource='pack://application:,,,/assets/images/button/bolt.svg' />
-                    </MenuItem.Icon>
                     <MenuItem Header="{x:Static local:Strings.MenuEditConfig}"
                               Click="MenuEditConfig_Click">
                         <MenuItem.Icon>

@@ -457,6 +457,13 @@ public class MainViewModel : ViewModelBase
     private static string ResolveStartupIndex() => AppConfig.ScriptIndexJsonPath;
 
     /// <summary>
+    /// 配置编辑器保存后调用：按当前 [script] script_index_file 重新渲染左侧目录树。
+    /// 与「文件▸打开」最终走的是同一条加载路径（<see cref="LoadTreeFromIndex"/>），
+    /// 故在配置里改了脚本索引文件并保存后，目录树会立即按新索引重建。
+    /// </summary>
+    public void ReloadTree() => LoadTreeFromIndex(ResolveStartupIndex());
+
+    /// <summary>
     /// 「打开」按钮：弹出文件选择框，直接选择脚本索引文件 index.json（结构同内置 script 目录的 index.json）。
     /// 选中非有效脚本索引（解析为空）时，目录树渲染为空（符合「渲染不出来即可」的预期，不弹窗报错），且不记忆该选择。
     /// </summary>

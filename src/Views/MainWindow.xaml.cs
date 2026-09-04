@@ -205,7 +205,7 @@ public partial class MainWindow : Window
     /// <summary>顶部「设置 ▸ 编辑配置」：打开 config.ini 结构化编辑弹窗（模态， Owner=主窗口）。</summary>
     private void MenuEditConfig_Click(object sender, RoutedEventArgs e)
     {
-        var dlg = new ConfigEditorWindow { Owner = this };
+        var dlg = new ConfigEditorWindow { Owner = this, OwnerViewModel = _vm };
         dlg.ShowDialog();
     }
 
