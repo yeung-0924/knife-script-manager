@@ -351,3 +351,7 @@ Write-Host "接收参数 Name = $Name"
 9. **`$x = Func` 会把函数的 `Write-Output` 日志一并收进变量（变成数组，污染路径变量）**：若安装 / 辅助函数一边用 `SayC` / `Say`（`Write-Output`，成功流 / stdout）打印诊断、一边 `return` 路径，调用处 `$x = Func` 会把「所有诊断行 + return 值」收成一个数组——路径变量变成诊断文本数组，`Join-Path $x` 会报含糊的 `Cannot bind argument to parameter 'Path' because it is null`，且 `if ($x)` 还会因数组非空而误判「成功」、跳过本该发生的回退。`Install-PowerShell7.ps1` 的 `Install-ViaWinGet` / `Install-ViaGitHub` 已踩此坑（现象：报错里 `pwshHome=` 后面跟着一长串 `[信息]…[异常]…` 诊断文本）。正确写法：调用处用 `@(Func)[-1]` 只取 pipeline 最后一个元素（即 `return` 值），丢弃前面的诊断行；或函数把结果写进 `$script:` 变量再 `return`（不返回值）。本仓库 `Install-PowerShell7.ps1` 已采用 `[-1]` 写法。
 10. **PS7 安装脚本「尊重用户所选下载源，不自动回退」（2026-09-04 暮云明确的设计规则）**：`Microsoft` / `GitHub` 二选一，用户选了什么就用什么；某一下载源失败就**如实提示原因 + 建议并 `exit 1`，绝不悄悄回退到另一下载源**。曾因「Microsoft 失败自动回退 GitHub」踩出第 9 条的污染崩溃，且回退本身违背用户意图。失败提示格式：一行 `[失败]`（红）说明哪个源失败，一行 `[原因]`、一行 `[建议]`（黄）给可操作指引，不要堆一连串 `[异常]` / 网络探测诊断。
 
+11. **脚本控制台标题要与 `index.json` 的 `name` 对齐（2026-09-04 暮云明确）**：每个运行时脚本开头的横幅标题（`Say '===== xxx ====='` 中间那行）应与其在 `script/runtime/index.json` 里的 `"name"` 字段一致，便于用户在日志里一眼对应到是哪个脚本。改脚本标题时同步确认 index.json 名称，避免「脚本叫 A、标题写 B」。当前 7 个 runtime 脚本标题均已对齐（如 `Install-Powershell7.ps1` 标题 = `安装 Powershell7 运行时环境`）。
+
+12. **长检测 / 耗时脚本要「边做边打印」，不要先攒后喷（2026-09-04 实测 UX 坑）**：`Get-RuntimeEnv.ps1` 原写法在内部把所有语言检测完（逐个 spawn java/node/go/rustc/python 进程，约 10 秒）后才打印第一行，导致用户看到一片空白、以为卡死。`ScriptRunner` 两条路径其实都是流式的（非提权 `BeginOutputReadLine` 异步读 stdout + 提权路径每 250ms 轮询日志文件），瓶颈在脚本侧而非执行器。正确写法：先打印标题与「更新时间」，再在每次检测前打「检测中: X ...」、检测完立即打印该项结果，让用户随时看到进度；不要先收集所有结果、最后一次性 `foreach` 输出。
+
