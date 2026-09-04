@@ -124,7 +124,7 @@ function Test-IsPwshHomePath {
 }
 
 # ---- GitHub 源：下载官方「解压即用」zip 包到自定义目录，返回解压出的 PowerShell 目录绝对路径 ----
-# 失败时直接 exit 1（该分支本就是 GitHub 源或被 Microsoft 源回退调用，无需再返回 $null）
+# 失败时返回 $null（不再 exit 1），由主流程统一收口报错，避免回退场景漏成含糊的 null 崩溃。
 function Install-ViaGitHub {
     param([string]$Major, [string]$InstallDir, [string]$Overwrite)
     # 覆盖模式：先删除同大版本的旧 PowerShell 目录
@@ -137,7 +137,7 @@ function Install-ViaGitHub {
             } catch {
                 SayC $RED '异常' "删除旧目录失败: $($_.Exception.Message)"
                 SayC $RED '异常' '请先关闭占用该目录的程序（如正在运行的 pwsh 进程），或手动删除后重试'
-                exit 1
+                return $null
             }
         }
     }
@@ -155,14 +155,14 @@ function Install-ViaGitHub {
         } | Select-Object -First 1
         if (-not $hit) {
             SayC $RED '异常' "未找到 PowerShell $Major 的稳定 release，请确认大版本号（如 7.5 / 7.4 / 7.2）"
-            exit 1
+            return $null
         }
         $pwshVer = $hit.tag_name.TrimStart('v')
         $downloadUrl = "https://github.com/PowerShell/PowerShell/releases/download/v$pwshVer/PowerShell-$pwshVer-win-$pwshArch.zip"
     } catch {
         SayC $RED '异常' "查询 PowerShell 版本信息失败: $($_.Exception.Message)"
         SayC $RED '异常' '请检查网络（需可访问 GitHub API），或稍后重试'
-        exit 1
+        return $null
     }
     SayC $YELLOW '信息' "PowerShell 版本: $pwshVer，下载链接: $downloadUrl"
 
@@ -204,7 +204,7 @@ function Install-ViaGitHub {
         if ($fs) { $fs.Close() }
         SayC $RED '异常' "下载失败: $($_.Exception.Message)"
         SayC $RED '异常' '请检查网络（需可访问 GitHub），或确认该版本包可用'
-        exit 1
+        return $null
     }
     SayC $GREEN '结果' "下载完成: $zipPath"
 
@@ -219,7 +219,7 @@ function Install-ViaGitHub {
     } catch {
         SayC $RED '异常' "解压失败: $($_.Exception.Message)"
         SayC $RED '异常' '若目标位于 Program Files 等受保护目录，请换一个目录，或以管理员身份运行'
-        exit 1
+        return $null
     }
     SayC $GREEN '结果' '解压完成'
 
@@ -230,7 +230,7 @@ function Install-ViaGitHub {
     $found = Find-MatchingPwsh -Dir $InstallDir -Major $Major
     if (-not $found) {
         SayC $RED '异常' "解压后未找到 PowerShell 目录（含 pwsh.exe），请检查目录: $InstallDir"
-        exit 1
+        return $null
     }
     return $found.FullName
 }
@@ -238,7 +238,12 @@ function Install-ViaGitHub {
 # ---- Microsoft 源辅助：在系统 PowerShell 目录中查找已安装的 pwsh.exe（按大版本匹配）----
 function Find-WinGetPwsh {
     param([string]$Major)
-    $roots = @('C:\Program Files\PowerShell', 'C:\Program Files (x86)\PowerShell')
+    # 同时覆盖系统目录（--scope machine）与每用户安装位置，避免提权/非提权差异导致漏检
+    $roots = @(
+        'C:\Program Files\PowerShell',
+        'C:\Program Files (x86)\PowerShell',
+        (Join-Path $env:LOCALAPPDATA 'Microsoft\PowerShell')
+    )
     foreach ($r in $roots) {
         if (-not (Test-Path $r)) { continue }
         $exe = Get-ChildItem -Path $r -Recurse -Filter pwsh.exe -ErrorAction SilentlyContinue | Select-Object -First 1
@@ -256,18 +261,28 @@ function Find-WinGetPwsh {
 # 返回解压/安装出的 PowerShell 目录绝对路径；失败（winget 缺失/安装异常/未找到）返回 $null，由调用方决定回退
 function Install-ViaWinGet {
     param([string]$Major)
-    $winget = $null
-    try { $winget = Get-Command winget.exe -ErrorAction SilentlyContinue } catch { }
-    if (-not $winget) {
+    # 定位 winget.exe：提权/非交互环境下 App Execution Alias 常不在 PATH，需回退到已知路径
+    $wingetExe = $null
+    try {
+        $c = Get-Command winget.exe -ErrorAction SilentlyContinue
+        if ($c) { $wingetExe = $c.Source }
+    } catch { }
+    if (-not $wingetExe) {
+        $alias = Join-Path $env:LOCALAPPDATA 'Microsoft\WindowsApps\winget.exe'
+        if (Test-Path $alias) { $wingetExe = $alias }
+    }
+    if (-not $wingetExe) {
         SayC $RED '异常' '未找到 winget.exe（Microsoft 源依赖 WinGet 安装 PowerShell），请先安装「应用安装程序(App Installer)」'
+        SayC $YELLOW '信息' '可改用「下载源=GitHub」；或手动安装 App Installer 后重试'
         return $null
     }
     $wingetVer = "$Major.0"
     SayC $YELLOW '信息' "Microsoft 源：通过 WinGet 安装 Microsoft.PowerShell 版本 $wingetVer ..."
     SayC $YELLOW '信息' '注：WinGet 安装至系统 PowerShell 目录（默认 C:\Program Files\PowerShell\7），将忽略自定义安装目录'
     try {
-        $p = Start-Process -FilePath 'winget.exe' -ArgumentList @(
+        $p = Start-Process -FilePath $wingetExe -ArgumentList @(
             'install', '--id', 'Microsoft.PowerShell', '--version', $wingetVer,
+            '--scope', 'machine',
             '--accept-package-agreements', '--accept-source-agreements', '--silent'
         ) -Wait -PassThru -WindowStyle Hidden
         SayC $YELLOW '信息' "WinGet 退出码: $($p.ExitCode)"
@@ -277,7 +292,7 @@ function Install-ViaWinGet {
     # 无论退出码都尝试定位 pwsh.exe（已安装时 WinGet 返回特定码而非 0）
     $pwshHome = Find-WinGetPwsh -Major $Major
     if ($pwshHome) { return $pwshHome }
-    SayC $RED '异常' "WinGet 安装后未找到 pwsh.exe，可能安装失败或被安全策略拦截"
+    SayC $RED '异常' "WinGet 安装后未找到 pwsh.exe，可能安装失败、被安全策略拦截，或装到了非系统目录"
     return $null
 }
 
@@ -362,7 +377,10 @@ function Ensure-PathHasScriptManagerEnv {
 }
 
 # ---- 主流程：按下载源分支（Microsoft=WinGet / GitHub=便携 zip）；已存在则按需复用或重装 ----
+# 安装函数统一「成功返回目录路径 / 失败返回 $null」（不再 exit 1），由本段统一收口报错，
+# 避免回退场景下失败被赋成 $null 后漏到下游、抛出含糊的「参数绑定为 null」错误。
 $pwshHome = $null
+$attemptedGitHub = $false
 if ($DownloadSource -ieq 'Microsoft') {
     # ==================== Microsoft 源：WinGet 安装（微软官方渠道）====================
     $existingWinGet = $null
@@ -377,11 +395,13 @@ if ($DownloadSource -ieq 'Microsoft') {
             $pwshHome = $wingetHome
         } else {
             SayC $YELLOW '信息' "Microsoft(WinGet) 安装失败，回退到 GitHub 下载源（便携 zip）"
+            $attemptedGitHub = $true
             $pwshHome = Install-ViaGitHub -Major $major -InstallDir $InstallDir -Overwrite $Overwrite
         }
     }
 } else {
     # ==================== GitHub 源：便携 zip（原有逻辑）====================
+    $attemptedGitHub = $true
     $existingPwsh = $null
     if ($Overwrite -eq '否') {
         $existingPwsh = Find-MatchingPwsh -Dir $InstallDir -Major $major
@@ -394,11 +414,18 @@ if ($DownloadSource -ieq 'Microsoft') {
     }
 }
 
-$pwshExe = Join-Path $pwshHome 'pwsh.exe'
-if (-not (Test-Path $pwshExe)) {
-    SayC $RED '异常' "未找到 pwsh.exe，请检查目录: $pwshHome"
+# ---- 兜底收口：两种下载源均未取得可用 pwsh 目录时，给出明确错误而非含糊的空值崩溃 ----
+if ([string]::IsNullOrWhiteSpace($pwshHome) -or -not (Test-Path (Join-Path $pwshHome 'pwsh.exe'))) {
+    if ($DownloadSource -ieq 'Microsoft') {
+        SayC $RED '异常' "PowerShell $major 安装失败：Microsoft(WinGet) 源与 GitHub 回退均未能产出可用的 pwsh.exe"
+    } else {
+        SayC $RED '异常' "PowerShell $major 安装失败：GitHub 下载源未能产出可用的 pwsh.exe"
+    }
+    SayC $RED '异常' "排查建议：① 确认本机已安装「应用安装程序(App Installer)」且可联网；② 或改用「下载源=GitHub」并确保可访问 github.com；③ 亦可手动从 https://github.com/PowerShell/PowerShell/releases 下载便携 zip 解压"
     exit 1
 }
+
+$pwshExe = Join-Path $pwshHome 'pwsh.exe'
 
 # ---- 验证（pwsh --version 输出 2>&1 合并后原色输出）----
 SayC $YELLOW '信息' '验证 pwsh --version:'
