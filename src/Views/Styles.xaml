@@ -286,7 +286,7 @@
     <Style x:Key="BaseButtonLight" TargetType="Button" BasedOn="{StaticResource BaseButton}">
         <Setter Property="Background" Value="#FFFFFF" />
         <Setter Property="Foreground" Value="{DynamicResource BrushTitle}" />
-        <Setter Property="BorderBrush" Value="{DynamicResource BrushBorder}" />
+        <Setter Property="BorderBrush" Value="#9A9A9A" />
         <Setter Property="BorderThickness" Value="1" />
         <Setter Property="Template">
             <Setter.Value>
@@ -299,10 +299,10 @@
                     </Border>
                     <ControlTemplate.Triggers>
                         <Trigger Property="IsMouseOver" Value="True">
-                            <Setter Property="Background" Value="#F0F0F0" />
+                            <Setter Property="Background" Value="#E8E8E8" />
                         </Trigger>
                         <Trigger Property="IsEnabled" Value="False">
-                            <Setter Property="Background" Value="#ECECEC" />
+                            <Setter Property="Background" Value="#E0E0E0" />
                             <Setter Property="Foreground" Value="{DynamicResource BrushDisabledFg}" />
                             <Setter Property="Cursor" Value="Arrow" />
                         </Trigger>
@@ -328,10 +328,10 @@
                     </Border>
                     <ControlTemplate.Triggers>
                         <Trigger Property="IsMouseOver" Value="True">
-                            <Setter Property="Background" Value="#F0F0F0" />
+                            <Setter Property="Background" Value="#E8E8E8" />
                         </Trigger>
                         <Trigger Property="IsEnabled" Value="False">
-                            <Setter Property="Background" Value="#ECECEC" />
+                            <Setter Property="Background" Value="#E0E0E0" />
                             <Setter Property="Foreground" Value="{DynamicResource BrushDisabledFg}" />
                             <Setter Property="Cursor" Value="Arrow" />
                         </Trigger>

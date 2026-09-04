@@ -150,7 +150,7 @@
                                     </Style>
                                 </Button.Style>
                             </Button>
-                            <svgc:SvgViewbox DockPanel.Dock="Left" Width="13" Height="13"
+                            <svgc:SvgViewbox DockPanel.Dock="Left" Width="14" Height="14"
                                              UriSource='pack://application:,,,/assets/images/button/scroll.svg'
                                              Margin="0,0,6,0" VerticalAlignment="Center" />
                             <TextBlock Text="{x:Static local:Strings.TitleScriptList}" Style="{StaticResource TitleText}" VerticalAlignment="Center" />
@@ -368,7 +368,7 @@
                                             IsEnabled="{Binding IsRunning, Converter={x:Static local:InverseBoolConverter.Instance}}"
                                             Margin="0"
                                             Content="{x:Static local:Strings.BtnReset}" />
-                                    <svgc:SvgViewbox DockPanel.Dock="Left" Width="13" Height="13"
+                                    <svgc:SvgViewbox DockPanel.Dock="Left" Width="14" Height="14"
                                                      UriSource='pack://application:,,,/assets/images/button/variable.svg'
                                                      Margin="0,0,6,0" VerticalAlignment="Center" />
                                     <TextBlock Text="{x:Static local:Strings.TitleScriptParams}" Style="{StaticResource TitleText}" VerticalAlignment="Center" />
@@ -554,7 +554,7 @@
                                             </Button.ContextMenu>
                                         </Button>
                                     </StackPanel>
-                                    <svgc:SvgViewbox DockPanel.Dock="Left" Width="13" Height="13"
+                                    <svgc:SvgViewbox DockPanel.Dock="Left" Width="14" Height="14"
                                                      UriSource='pack://application:,,,/assets/images/button/scan-eye.svg'
                                                      Margin="0,0,6,0" VerticalAlignment="Center" />
                                     <TextBlock Text="{x:Static local:Strings.TitleScriptPreview}" Style="{StaticResource TitleText}" VerticalAlignment="Center" />
@@ -639,7 +639,7 @@
                                         </Button.ContextMenu>
                                     </Button>
                                 </StackPanel>
-                                <svgc:SvgViewbox DockPanel.Dock="Left" Width="13" Height="13"
+                                <svgc:SvgViewbox DockPanel.Dock="Left" Width="14" Height="14"
                                                  UriSource='pack://application:,,,/assets/images/button/file-clock.svg'
                                                  Margin="0,0,6,0" VerticalAlignment="Center" />
                                 <TextBlock Text="{x:Static local:Strings.TitleExecLog}" Style="{StaticResource TitleText}" VerticalAlignment="Center" />
