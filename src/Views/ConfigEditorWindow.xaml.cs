@@ -1,5 +1,6 @@
 using System.Collections.Generic;
 using System.ComponentModel;
+using System.IO;
 using System.Windows;
 using System.Windows.Controls;
 using System.Windows.Input;
@@ -14,7 +15,8 @@ namespace ScriptManager.Views;
 /// 写入由 <see cref="AppConfig.SetRawValue"/> 保证保留注释/顺序/其它节；保存后调用
 /// <see cref="AppConfig.Reload"/> 刷新内存缓存。多数配置读时取值、保存即生效（无需重启）；
 /// 其中脚本索引文件(script_index_file)被改动时，会通知宿主视图模型实时重建左侧目录树。
-/// 仅运行时目录(runtime_dir)对应的「运行时自动检测」在启动时跑一次、已检测路径会缓存，改该目录后建议重启。
+/// 仅缓存目录(cache_dir，存放自动检测的运行时缓存、启动时固化)与运行时目录(runtime_dir，存放程序下载的运行时、
+/// 自动检测结果已缓存)改后需重启才生效——顶部红字提示默认隐藏，仅当本次编辑改动到这两项时才显示，改回原值即取消。
 /// 目录/文件项均为只读选择框（浏览按钮），不可手输；未自定义时留空并显示默认相对路径占位符，
 /// 点击 × 或「默认值」可清除、回落到内置相对默认（script\index.json / lib / runtime / cache / log）。
 /// 「默认执行超时(秒)」是弹窗内唯一允许手输的数字项（空白 = 不限制）。
@@ -24,6 +26,23 @@ public partial class ConfigEditorWindow : Window
     private readonly List<ConfigRow> _rows = new();
     // 默认执行超时(秒)：唯一可手输字段，空白 = 不限制（0）。
     private readonly TimeoutRow _timeout = new();
+
+    /// <summary>
+    /// 需要重启程序才能生效的配置项 -> 其默认相对子目录名。
+    /// 用于把「留空」「显式写出默认相对路径」与基线值做等价归一化比较。
+    /// 依据：cache_dir 存放自动检测的运行时缓存（CacheStore.CacheRoot 为 static readonly，启动时固化；
+    /// RuntimeConfig.EnsureAutoDetected 在启动跑一次并把结果写入 cache/runtimes.json）；
+    /// runtime_dir 存放程序下载的运行时，EnsureAutoDetected 的检测结果已缓存，改目录后不会重探。
+    /// 其余项（script_index_file / default_timeout / lib_dir / log_dir）均为读时解析、保存即生效，无需重启。
+    /// </summary>
+    private static readonly Dictionary<string, string> RestartKeys = new()
+    {
+        ["cache_dir"] = "cache",
+        ["runtime_dir"] = "runtime",
+    };
+
+    /// <summary>窗口打开时各重启项的归一化基线值（key -> 归一化绝对路径），用于判断本次编辑是否改动了它们。</summary>
+    private readonly Dictionary<string, string> _baseline = new();
 
     /// <summary>宿主主窗口的视图模型，保存后用于触发左侧目录树按新脚本索引重建；可为 null（防御性）。</summary>
     public MainViewModel? OwnerViewModel { get; set; }
@@ -39,6 +58,14 @@ public partial class ConfigEditorWindow : Window
         _rows.Add(MakeRow("cache_dir", "缓存目录", "folder", "cache"));
         _rows.Add(MakeRow("log_dir", "日志目录", "folder", "log"));
         Rows.ItemsSource = _rows;
+
+        // 捕获窗口打开时「需重启才生效」配置项（缓存目录 / 运行时目录）的归一化基线值，
+        // 并订阅各行 Value 变更以实时刷新顶部红字提示。
+        foreach (var kv in RestartKeys)
+            _baseline[kv.Key] = NormalizeDirRaw(AppConfig.GetRawValue("script", kv.Key), kv.Value);
+        foreach (var row in _rows)
+            row.PropertyChanged += (_, _) => RefreshRestartHint();
+        RefreshRestartHint();
 
         // 超时同理：留空或显式写 0 都表示「不限制」，统一显示为空白 + 占位符「0（不限制）」
         var tRaw = AppConfig.GetRawValue("script", "default_timeout")?.Trim();
@@ -83,6 +110,41 @@ public partial class ConfigEditorWindow : Window
         p = p.Trim().Replace('/', '\\').TrimEnd('\\');
         if (p.StartsWith(".\\", StringComparison.Ordinal)) p = p[2..];
         return p.ToLowerInvariant();
+    }
+
+    /// <summary>
+    /// 刷新顶部红字提示的可见性：仅当本次编辑改动了某个「需重启才生效」的配置项
+    /// （缓存目录 / 运行时目录）时显示。比较「当前各行值」与「窗口打开时的基线值」的归一化路径：
+    /// 改了就显示，改回原值则取消。用户点「默认值」导致某个重启项被重置（值变更）时同样会触发。
+    /// </summary>
+    private void RefreshRestartHint()
+    {
+        var changed = false;
+        foreach (var kv in RestartKeys)
+        {
+            var row = _rows.Find(r => r.Key == kv.Key);
+            if (row == null) continue;
+            var wouldBe = NormalizeDirRaw(row.Value, kv.Value);
+            if (!string.Equals(wouldBe, _baseline[kv.Key], System.StringComparison.OrdinalIgnoreCase))
+            {
+                changed = true;
+                break;
+            }
+        }
+        RestartHint.Visibility = changed ? Visibility.Visible : Visibility.Collapsed;
+    }
+
+    /// <summary>
+    /// 把目录配置的原始值（可能为空 / 相对 / 绝对）归一化为可比较的绝对路径字符串，
+    /// 与 <see cref="AppConfig"/> 的 <c>ResolveDir</c> 规则一致（空=默认子目录；相对=相对 exe 目录）。
+    /// </summary>
+    private static string NormalizeDirRaw(string? raw, string defaultSub)
+    {
+        raw = (raw ?? "").Trim();
+        var exeDir = Path.GetDirectoryName(Environment.ProcessPath) ?? AppContext.BaseDirectory;
+        if (raw.Length == 0) raw = defaultSub;
+        else if (!Path.IsPathRooted(raw)) raw = Path.Combine(exeDir, raw);
+        return Path.GetFullPath(raw).TrimEnd('\\').ToLowerInvariant();
     }
 
     private void Browse_Click(object sender, RoutedEventArgs e)
