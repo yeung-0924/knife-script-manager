@@ -122,21 +122,38 @@ public static class AppConfig
     public static void SetUserScriptFilePath(string file)
     {
         if (string.IsNullOrWhiteSpace(file)) return;
+        SetRawValue("script", "user_script_file", Path.GetFullPath(file));
+    }
+
+    /// <summary>
+    /// 读取配置项原始字符串值（未解析路径）。节或 key 不存在返回 null。供配置编辑弹窗回显当前值。
+    /// </summary>
+    public static string? GetRawValue(string section, string key)
+    {
+        if (Sections.TryGetValue(section, out var kv) && kv.TryGetValue(key, out var v))
+            return v;
+        return null;
+    }
+
+    /// <summary>
+    /// 通用写入配置项：保留注释、空行、节顺序与文件格式。value 为空则移除该 key 行（恢复默认）；
+    /// 节不存在则创建。写入失败仅记调试日志、不抛异常。同时同步内存缓存，使同进程内即时反映。
+    /// </summary>
+    public static void SetRawValue(string section, string key, string? value)
+    {
         try
         {
             var lines = File.Exists(ConfigPath)
                 ? new List<string>(File.ReadAllLines(ConfigPath))
                 : new List<string>();
-            const string sec = "script";
-            const string k = "user_script_file";
-            var v = Path.GetFullPath(file);
+            value = (value ?? "").Trim();
 
             var secIdx = -1;
             for (var i = 0; i < lines.Count; i++)
             {
                 var t = lines[i].Trim();
                 if (t.StartsWith("[") && t.EndsWith("]") &&
-                    t.Substring(1, t.Length - 2).Trim().Equals(sec, StringComparison.OrdinalIgnoreCase))
+                    t.Substring(1, t.Length - 2).Trim().Equals(section, StringComparison.OrdinalIgnoreCase))
                 {
                     secIdx = i;
                     break;
@@ -145,10 +162,11 @@ public static class AppConfig
 
             if (secIdx < 0)
             {
-                // 整个 [script] 节都不存在：追加新节
+                if (string.IsNullOrEmpty(value)) return; // 节与值都不存在，无需创建
+                // 整个 [section] 节都不存在：追加新节
                 if (lines.Count > 0 && lines[^1].Trim().Length > 0) lines.Add("");
-                lines.Add($"[{sec}]");
-                lines.Add($"{k}={v}");
+                lines.Add($"[{section}]");
+                lines.Add($"{key}={value}");
             }
             else
             {
@@ -165,28 +183,47 @@ public static class AppConfig
                     var t = lines[i].Trim();
                     if (t.Length == 0 || t.StartsWith(";") || t.StartsWith("#")) continue;
                     var eq = t.IndexOf('=');
-                    if (eq >= 0 && t.Substring(0, eq).Trim().Equals(k, StringComparison.OrdinalIgnoreCase))
+                    if (eq >= 0 && t.Substring(0, eq).Trim().Equals(key, StringComparison.OrdinalIgnoreCase))
                     {
                         keyIdx = i;
                         break;
                     }
                 }
-                if (keyIdx >= 0) lines[keyIdx] = $"{k}={v}";
-                else lines.Insert(end, $"{k}={v}");
+                if (string.IsNullOrEmpty(value))
+                {
+                    if (keyIdx >= 0) lines.RemoveAt(keyIdx); // 清空即移除该行，恢复默认
+                }
+                else if (keyIdx >= 0)
+                    lines[keyIdx] = $"{key}={value}";
+                else
+                    lines.Insert(end, $"{key}={value}");
             }
 
             Directory.CreateDirectory(ConfigDir);
             File.WriteAllLines(ConfigPath, lines, new UTF8Encoding(false));
 
-            // 同步内存缓存，使本进程内 UserScriptFilePath 立即返回新值
-            if (!Sections.ContainsKey(sec))
-                Sections[sec] = new Dictionary<string, string>(StringComparer.OrdinalIgnoreCase);
-            Sections[sec][k] = v;
+            // 同步内存缓存：清空则移除，否则更新
+            if (!Sections.ContainsKey(section))
+                Sections[section] = new Dictionary<string, string>(StringComparer.OrdinalIgnoreCase);
+            if (string.IsNullOrEmpty(value)) Sections[section].Remove(key);
+            else Sections[section][key] = value;
         }
         catch (Exception ex)
         {
-            Debug.WriteLine("写入 config.ini (user_script_file) 失败: " + ex.Message);
+            Debug.WriteLine($"写入 config.ini ({section}/{key}) 失败: " + ex.Message);
         }
+    }
+
+    /// <summary>
+    /// 重新从磁盘加载配置到内存缓存（<see cref="Sections"/>）。配置编辑保存后调用，
+    /// 使本进程后续读取即时反映新值（部分配置如脚本目录切换仍需重启才真正生效）。
+    /// </summary>
+    public static void Reload()
+    {
+        var fresh = Load();
+        Sections.Clear();
+        foreach (var kv in fresh)
+            Sections[kv.Key] = kv.Value;
     }
 
     private static string? GetValue(string section, string key)

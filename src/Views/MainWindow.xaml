@@ -26,6 +26,44 @@
     </Window.Resources>
 
     <DockPanel>
+        <!-- 顶部工具栏：文件 / 设置 下拉菜单（与脚本列表原有的「打开」「导出」按钮同源，复用其命令与图标） -->
+        <Border DockPanel.Dock="Top" Background="{DynamicResource BrushToolbarBg}"
+                BorderBrush="{DynamicResource BrushBorder}" BorderThickness="0,0,0,1">
+            <Menu Background="Transparent" Foreground="{DynamicResource BrushText}" Padding="4,2">
+                <MenuItem Header="{x:Static local:Strings.MenuFile}">
+                    <MenuItem Command="{Binding OpenFolderCommand}"
+                              Header="{x:Static local:Strings.BtnOpen}">
+                        <MenuItem.Icon>
+                            <svgc:SvgViewbox Width="13" Height="13"
+                                             UriSource='pack://application:,,,/assets/images/button/folder-open.svg' />
+                        </MenuItem.Icon>
+                    </MenuItem>
+                    <MenuItem Command="{Binding ExportCommand}"
+                              Header="{x:Static local:Strings.BtnExport}">
+                        <MenuItem.Icon>
+                            <svgc:SvgViewbox Width="13" Height="13"
+                                             UriSource='pack://application:,,,/assets/images/button/download.svg' />
+                        </MenuItem.Icon>
+                    </MenuItem>
+                </MenuItem>
+                <MenuItem Header="{x:Static local:Strings.MenuSettings}">
+                    <MenuItem Header="{x:Static local:Strings.MenuEditConfig}"
+                              Click="MenuEditConfig_Click">
+                        <MenuItem.Icon>
+                            <svgc:SvgViewbox Width="13" Height="13"
+                                             UriSource='pack://application:,,,/assets/images/button/settings.svg' />
+                        </MenuItem.Icon>
+                    </MenuItem>
+                    <MenuItem Header="{x:Static local:Strings.MenuOpenConfigDir}"
+                              Click="MenuOpenConfigDir_Click">
+                        <MenuItem.Icon>
+                            <svgc:SvgViewbox Width="13" Height="13"
+                                             UriSource='pack://application:,,,/assets/images/button/folder-open.svg' />
+                        </MenuItem.Icon>
+                    </MenuItem>
+                </MenuItem>
+            </Menu>
+        </Border>
         <!-- 底部状态栏 -->
         <StatusBar DockPanel.Dock="Bottom">
             <StatusBarItem VerticalAlignment="Center">
@@ -110,30 +148,6 @@
                                         </Style.Triggers>
                                     </Style>
                                 </Button.Style>
-                            </Button>
-                            <Button DockPanel.Dock="Right"
-                                    Style="{StaticResource BaseButtonLight}"
-                                    Command="{Binding ExportCommand}"
-                                    IsEnabled="{Binding IsRunning, Converter={x:Static local:InverseBoolConverter.Instance}}"
-                                    Width="24" Height="24" Padding="0"
-                                    Margin="0,0,3,0"
-                                    ToolTip="{x:Static local:Strings.BtnExport}"
-                                    HorizontalAlignment="Right" VerticalAlignment="Center">
-                                <svgc:SvgViewbox Width="13" Height="13"
-                                                 UriSource='pack://application:,,,/assets/images/button/download.svg'
-                                                 HorizontalAlignment="Center" VerticalAlignment="Center" />
-                            </Button>
-                            <Button DockPanel.Dock="Right"
-                                    Style="{StaticResource BaseButtonLight}"
-                                    Command="{Binding OpenFolderCommand}"
-                                    IsEnabled="{Binding IsRunning, Converter={x:Static local:InverseBoolConverter.Instance}}"
-                                    Width="24" Height="24" Padding="0"
-                                    Margin="0,0,3,0"
-                                    ToolTip="{x:Static local:Strings.BtnOpen}"
-                                    HorizontalAlignment="Right" VerticalAlignment="Center">
-                                <svgc:SvgViewbox Width="13" Height="13"
-                                                 UriSource='pack://application:,,,/assets/images/button/folder-open.svg'
-                                                 HorizontalAlignment="Center" VerticalAlignment="Center" />
                             </Button>
                             <TextBlock Text="{x:Static local:Strings.TitleScriptList}" Style="{StaticResource TitleText}" VerticalAlignment="Center" />
                         </DockPanel>

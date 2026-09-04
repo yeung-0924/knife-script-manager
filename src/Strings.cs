@@ -33,8 +33,21 @@ public static class Strings
     public const string BtnAutoToolTip = "自动检测环境变量中的可执行文件";
     public const string BtnExpandAll = "展开全部";
     public const string BtnCollapseAll = "收起全部";
-    public const string BtnExpandCollapseToolTip = "展开/收起全部目录";
-    #endregion
+        public const string BtnExpandCollapseToolTip = "展开/收起全部目录";
+        #endregion
+
+        #region 顶部菜单（工具栏）
+        public const string MenuFile = "文件";
+        public const string MenuSettings = "设置";
+        public const string MenuEditConfig = "编辑配置 (config.ini)...";
+        public const string MenuOpenConfigDir = "打开配置目录";
+        public const string TitleConfigEditor = "配置编辑 - config.ini";
+        public const string ConfigEditorNote = "修改后需重启程序生效。留空的项将使用程序内置默认值。";
+        public const string ConfigEditorSaved = "已保存（重启后生效）";
+        public const string ConfigEditorSaveFail = "保存失败：{0}";
+        public const string ConfigEditorBrowseFolder = "选择目录";
+        public const string ConfigEditorBrowseFile = "选择脚本索引文件 (index.json)";
+        #endregion
 
     #region 状态消息（StatusText）
     public const string StatusReady = "就绪";
