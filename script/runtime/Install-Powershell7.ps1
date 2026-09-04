@@ -1,4 +1,4 @@
-# 更新时间: 2026-09-04 14:59:35
+# 更新时间: 2026-09-04 15:47:42
 # Install-Powershell7.ps1 - 安装 PowerShell 7（含 pwsh.exe）
 #   下载源（DOWNLOAD_SOURCE）：
 #     Microsoft = 通过 WinGet（Microsoft.PowerShell）从微软官方渠道安装（默认，二进制来自微软 CDN，系统级目录）
@@ -105,6 +105,19 @@ if ([string]::IsNullOrWhiteSpace($AddToPath))      { $AddToPath = '是' }
 Say '=========================================='
 Say ' 自动安装 PowerShell 7'
 Say '=========================================='
+# ---- 控制台同步打印「更新时间」：从脚本头部注释读取，便于用户贴错误日志时直接看到脚本版本时间 ----
+$updateTime = ''
+try {
+    $scriptPath = $PSCommandPath
+    if ([string]::IsNullOrWhiteSpace($scriptPath)) { $scriptPath = $MyInvocation.MyCommand.Path }
+    if (-not [string]::IsNullOrWhiteSpace($scriptPath)) {
+        $hdrLine = Get-Content -LiteralPath $scriptPath -TotalCount 1 -ErrorAction SilentlyContinue
+        if ($hdrLine -match '更新时间:\s*([\d\-: ]+)\s*$') { $updateTime = $Matches[1].Trim() }
+    }
+} catch { }
+if (-not [string]::IsNullOrWhiteSpace($updateTime)) {
+    SayC $YELLOW '脚本' "更新时间: $updateTime"
+}
 SayC $GREEN '入参' "安装目录: $InstallDir"
 SayC $GREEN '入参' "PowerShell 版本: $Version"
 SayC $GREEN '入参' "下载源: $DownloadSource"
@@ -441,6 +454,11 @@ if ([string]::IsNullOrWhiteSpace($pwshHome)) {
         SayC $YELLOW '诊断' "github.com 访问: 不可达 ($($_.Exception.Message))"
     }
     SayC $RED '异常' "排查建议：① 确认本机已安装「应用安装程序(App Installer)」且可联网；② 或改用「下载源=GitHub」并确保可访问 github.com（含镜像）；③ 亦可手动从 https://github.com/PowerShell/PowerShell/releases 下载便携 zip 解压"
+    exit 1
+}
+# 兜底：上方已统一收口 $null 情况，这里再保险一次，避免任何路径下把 $null 传入 Join-Path 抛含糊错误
+if ([string]::IsNullOrWhiteSpace($pwshHome)) {
+    SayC $RED '异常' "内部错误：pwshHome 为空，无法拼接 pwsh.exe 路径，已终止（请检查 Microsoft/WinGet 源与网络连通性）"
     exit 1
 }
 $pwshExe = Join-Path $pwshHome 'pwsh.exe'

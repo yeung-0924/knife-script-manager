@@ -319,6 +319,20 @@ Write-Host "接收参数 Name = $Name"
 - **只标日期、不写改动内容（重要）**：头部只保留「更新时间: 时间戳（到秒）」这一行，**严禁**在脚本里追加「本次改了什么 / 改动说明 / changelog」之类的注释。理由：发版后用户能看到脚本，日期戳已足够让 AI 判断版本新旧，而改动说明会暴露你改过什么。需要沉淀的是「坑」（见第十二节，属内部 AI 文档），不是「本次改了啥」。
 - **模板已内置**：`templates/tpl_*.xx` 已带该行，从模板生成新脚本时把日期改为当天即可。
 - 该规则对 9 种语言一致执行，不得遗漏。
+- **控制台也须打印更新时间（强制）**：除头部注释外，脚本运行时必须在标题横幅（如 `Say '====...'` / `echo` 横幅）**之后、入参打印之前**，用一行把更新时间打到 stdout。示例（PowerShell）：
+  ```powershell
+  # 从脚本自身首行注释解析「更新时间」并打印（不硬编码，避免与注释脱节）
+  $updateTime = ''
+  try {
+      $sp = $PSCommandPath; if ([string]::IsNullOrWhiteSpace($sp)) { $sp = $MyInvocation.MyCommand.Path }
+      if (-not [string]::IsNullOrWhiteSpace($sp)) {
+          $hdr = Get-Content -LiteralPath $sp -TotalCount 1 -ErrorAction SilentlyContinue
+          if ($hdr -match '更新时间:\s*([\d\-: ]+)\s*$') { $updateTime = $Matches[1].Trim() }
+      }
+  } catch { }
+  if (-not [string]::IsNullOrWhiteSpace($updateTime)) { SayC $YELLOW '脚本' "更新时间: $updateTime" }
+  ```
+  其它语言同理：用各自方式读取首行注释里的 `更新时间:` 并原样输出一行。**目的**：用户贴错误日志时，AI 无需对照文件、直接从日志里就能读到脚本版本时间，立刻判断其运行的脚本是否为最新。模板 `templates/tpl_powershell.ps1` 已内置该段，新脚本直接复用；其它语言的模板也应在标题后加入等价的打印。
 
 ---
 
