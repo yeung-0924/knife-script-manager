@@ -1,5 +1,3 @@
-using System.Diagnostics;
-using System.IO;
 using System.Windows;
 using System.Windows.Controls;
 using System.Windows.Controls.Primitives;
@@ -209,26 +207,6 @@ public partial class MainWindow : Window
     {
         var dlg = new ConfigEditorWindow { Owner = this };
         dlg.ShowDialog();
-    }
-
-    /// <summary>顶部「设置 ▸ 打开配置目录」：在资源管理器中选中 config.ini，便于手动编辑。</summary>
-    private void MenuOpenConfigDir_Click(object sender, RoutedEventArgs e)
-    {
-        try
-        {
-            var dir = AppConfig.ConfigDir;
-            Directory.CreateDirectory(dir);
-            Process.Start(new ProcessStartInfo
-            {
-                FileName = "explorer.exe",
-                Arguments = $"/select,\"{Path.Combine(dir, "config.ini")}\"",
-                UseShellExecute = true
-            });
-        }
-        catch
-        {
-            // 打开文件管理器失败属非关键操作，静默忽略（不影响主流程）
-        }
     }
 
     /// <summary>

@@ -54,13 +54,6 @@
                                              UriSource='pack://application:,,,/assets/images/button/settings.svg' />
                         </MenuItem.Icon>
                     </MenuItem>
-                    <MenuItem Header="{x:Static local:Strings.MenuOpenConfigDir}"
-                              Click="MenuOpenConfigDir_Click">
-                        <MenuItem.Icon>
-                            <svgc:SvgViewbox Width="13" Height="13"
-                                             UriSource='pack://application:,,,/assets/images/button/folder-open.svg' />
-                        </MenuItem.Icon>
-                    </MenuItem>
                 </MenuItem>
             </Menu>
         </Border>

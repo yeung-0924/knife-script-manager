@@ -12,34 +12,37 @@ namespace ScriptManager.Views;
 /// 写入由 <see cref="AppConfig.SetRawValue"/> 保证保留注释/顺序/其它节；保存后调用
 /// <see cref="AppConfig.Reload"/> 刷新内存缓存，但部分配置（如脚本目录切换）仍需重启才真正生效，
 /// 故弹窗仅提示「已保存（重启后生效）」，不自动重建。
+/// 字段均为目录/文件选择（只读输入框 + 浏览按钮），不可手输、不可置空；「默认值」可一键还原。
 /// </summary>
 public partial class ConfigEditorWindow : Window
 {
+    private readonly List<ConfigRow> _rows = new();
+
     public ConfigEditorWindow()
     {
         InitializeComponent();
-        var rows = new List<ConfigRow>
+        _rows.Add(MakeRow("default_script_file", "默认脚本索引文件", "file", AppConfig.DefaultScriptFilePath));
+        _rows.Add(MakeRow("lib_dir", "第三方依赖目录", "folder", AppConfig.LibDir));
+        _rows.Add(MakeRow("runtime_dir", "运行时安装目录", "folder", AppConfig.RuntimeDir));
+        _rows.Add(MakeRow("cache_dir", "缓存目录", "folder", AppConfig.CacheDir));
+        _rows.Add(MakeRow("log_dir", "日志目录", "folder", AppConfig.LogDir));
+        Rows.ItemsSource = _rows;
+    }
+
+    /// <summary>构建一行：未自定义时显示解析后的默认值（保证输入框非空、不可置空）。</summary>
+    private static ConfigRow MakeRow(string key, string label, string kind, string resolvedDefault)
+    {
+        var raw = AppConfig.GetRawValue("script", key);
+        var effective = string.IsNullOrWhiteSpace(raw) ? resolvedDefault : raw.Trim();
+        return new ConfigRow
         {
-            new ConfigRow { Key = "default_script_file", Label = "默认脚本索引文件", Kind = "file",
-                Value = AppConfig.GetRawValue("script", "default_script_file") ?? "",
-                DefaultHint = "默认：" + AppConfig.DefaultScriptFilePath },
-            new ConfigRow { Key = "lib_dir", Label = "第三方依赖目录", Kind = "folder",
-                Value = AppConfig.GetRawValue("script", "lib_dir") ?? "",
-                DefaultHint = "默认：" + AppConfig.LibDir },
-            new ConfigRow { Key = "runtime_dir", Label = "运行时安装目录", Kind = "folder",
-                Value = AppConfig.GetRawValue("script", "runtime_dir") ?? "",
-                DefaultHint = "默认：" + AppConfig.RuntimeDir },
-            new ConfigRow { Key = "cache_dir", Label = "缓存目录", Kind = "folder",
-                Value = AppConfig.GetRawValue("script", "cache_dir") ?? "",
-                DefaultHint = "默认：" + AppConfig.CacheDir },
-            new ConfigRow { Key = "log_dir", Label = "日志目录", Kind = "folder",
-                Value = AppConfig.GetRawValue("script", "log_dir") ?? "",
-                DefaultHint = "默认：" + AppConfig.LogDir },
-            new ConfigRow { Key = "default_timeout", Label = "默认执行超时(秒)", Kind = "text",
-                Value = AppConfig.GetRawValue("script", "default_timeout") ?? "",
-                DefaultHint = "0 = 不限制" },
+            Key = key,
+            Label = label,
+            Kind = kind,
+            Value = effective,
+            DefaultValue = resolvedDefault,
+            DefaultHint = "默认：" + resolvedDefault,
         };
-        Rows.ItemsSource = rows;
     }
 
     private void Browse_Click(object sender, RoutedEventArgs e)
@@ -67,31 +70,55 @@ public partial class ConfigEditorWindow : Window
     {
         try
         {
-            foreach (ConfigRow row in Rows.ItemsSource)
+            foreach (var row in _rows)
                 AppConfig.SetRawValue("script", row.Key, row.Value.Trim());
             AppConfig.Reload();
-            StatusText.Text = Strings.ConfigEditorSaved;
-            StatusText.Visibility = Visibility.Visible;
+            ShowStatus(Strings.ConfigEditorSaved);
         }
         catch (System.Exception ex)
         {
-            StatusText.Text = string.Format(Strings.ConfigEditorSaveFail, ex.Message);
-            StatusText.Visibility = Visibility.Visible;
+            ShowStatus(string.Format(Strings.ConfigEditorSaveFail, ex.Message));
+        }
+    }
+
+    /// <summary>一键还原默认值：立即写回内置默认并刷新缓存，用户无需再点「保存」。</summary>
+    private void BtnReset_Click(object sender, RoutedEventArgs e)
+    {
+        try
+        {
+            foreach (var row in _rows)
+            {
+                row.Value = row.DefaultValue;
+                AppConfig.SetRawValue("script", row.Key, row.DefaultValue.Trim());
+            }
+            AppConfig.Reload();
+            ShowStatus(Strings.ConfigEditorRestored);
+        }
+        catch (System.Exception ex)
+        {
+            ShowStatus(string.Format(Strings.ConfigEditorSaveFail, ex.Message));
         }
     }
 
     private void BtnCancel_Click(object sender, RoutedEventArgs e) => Close();
+
+    private void ShowStatus(string text)
+    {
+        StatusText.Text = text;
+        StatusText.Visibility = Visibility.Visible;
+    }
 }
 
-/// <summary>配置编辑弹窗的一行绑定模型（路径类带「浏览」按钮）。</summary>
+/// <summary>配置编辑弹窗的一行绑定模型（目录/文件选择：只读展示 + 浏览修改）。</summary>
 public class ConfigRow : INotifyPropertyChanged
 {
     public string Key { get; set; } = "";
     public string Label { get; set; } = "";
-    /// <summary>text=普通文本；folder=目录浏览；file=文件浏览。</summary>
-    public string Kind { get; set; } = "text";
-    public bool IsPath => Kind != "text";
+    /// <summary>folder=选目录；file=选文件。</summary>
+    public string Kind { get; set; } = "folder";
     public string DefaultHint { get; set; } = "";
+    /// <summary>解析后的内置默认值，供「默认值」按钮还原。</summary>
+    public string DefaultValue { get; set; } = "";
 
     private string _value = "";
     public string Value

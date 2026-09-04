@@ -24,6 +24,7 @@ public static class Strings
     public const string BtnOpen = "打开";
     public const string BtnSave = "保存";
     public const string BtnReset = "重置";
+    public const string BtnDefault = "默认值";
     public const string BtnCopy = "复制";
     public const string BtnSettings = "配置";
     public const string BtnClear = "清空";
@@ -39,11 +40,11 @@ public static class Strings
         #region 顶部菜单（工具栏）
         public const string MenuFile = "文件";
         public const string MenuSettings = "设置";
-        public const string MenuEditConfig = "编辑配置 (config.ini)...";
-        public const string MenuOpenConfigDir = "打开配置目录";
+        public const string MenuEditConfig = "编辑配置...";
         public const string TitleConfigEditor = "配置编辑 - config.ini";
-        public const string ConfigEditorNote = "修改后需重启程序生效。留空的项将使用程序内置默认值。";
+        public const string ConfigEditorNote = "修改后需重启程序生效。各项只能选择目录/文件，不可手动输入；点击「默认值」可一键恢复出厂设置。";
         public const string ConfigEditorSaved = "已保存（重启后生效）";
+        public const string ConfigEditorRestored = "已还原为默认值（重启后生效）";
         public const string ConfigEditorSaveFail = "保存失败：{0}";
         public const string ConfigEditorBrowseFolder = "选择目录";
         public const string ConfigEditorBrowseFile = "选择脚本索引文件 (index.json)";
