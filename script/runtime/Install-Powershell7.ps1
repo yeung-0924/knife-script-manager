@@ -1,4 +1,4 @@
-# 更新时间: 2026-09-04 16:57:08
+# 更新时间: 2026-09-04 17:45:20
 # Install-Powershell7.ps1 - 安装 PowerShell 7（含 pwsh.exe）
 #   下载源（DOWNLOAD_SOURCE）：
 #     Microsoft = 通过 WinGet（Microsoft.PowerShell）从微软官方渠道安装（默认，二进制来自微软 CDN，系统级目录）
@@ -413,13 +413,16 @@ if ($DownloadSource -ieq 'Microsoft') {
         $pwshHome = $existingWinGet
     } else {
         # 覆盖模式：WinGet 重装会覆盖同版本，无需手动删除
-        $wingetHome = Install-ViaWinGet -Major $major
+        # 注：Install-ViaWinGet 内部用 SayC(Write-Output) 打印诊断，调用方若直接 `$x = Func` 会把诊断行也收进 $x（变成数组），
+        # 导致路径变量变成诊断文本而非目录。return 值是 pipeline 最后一个元素，用 [-1] 只取它。
+        $wingetHome = @(Install-ViaWinGet -Major $major)[-1]
         if ($wingetHome) {
             $pwshHome = $wingetHome
         } else {
             SayC $YELLOW '信息' "Microsoft(WinGet) 安装失败，回退到 GitHub 下载源（便携 zip）"
             $attemptedGitHub = $true
-            $pwshHome = Install-ViaGitHub -Major $major -InstallDir $InstallDir -Overwrite $Overwrite
+            # 同上：Install-ViaGitHub 也用 SayC 打印诊断，必须 [-1] 取 return 值，避免诊断行污染路径变量
+            $pwshHome = @(Install-ViaGitHub -Major $major -InstallDir $InstallDir -Overwrite $Overwrite)[-1]
         }
     }
 } else {
@@ -433,7 +436,8 @@ if ($DownloadSource -ieq 'Microsoft') {
         SayC $YELLOW '信息' "检测到已安装 PowerShell $major : $($existingPwsh.FullName)，跳过下载与解压"
         $pwshHome = $existingPwsh.FullName
     } else {
-        $pwshHome = Install-ViaGitHub -Major $major -InstallDir $InstallDir -Overwrite $Overwrite
+        # 同上：用 [-1] 取 return 值，避免 SayC 诊断行污染路径变量
+        $pwshHome = @(Install-ViaGitHub -Major $major -InstallDir $InstallDir -Overwrite $Overwrite)[-1]
     }
 }
 
