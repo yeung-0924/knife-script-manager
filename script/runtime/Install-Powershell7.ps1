@@ -1,10 +1,14 @@
-# Install-Powershell7.ps1 - 从 GitHub 下载并安装 PowerShell 7（官方解压即用包，含 pwsh.exe）
+﻿# Install-Powershell7.ps1 - 安装 PowerShell 7（含 pwsh.exe）
+#   下载源（DOWNLOAD_SOURCE）：
+#     Microsoft = 通过 WinGet（Microsoft.PowerShell）从微软官方渠道安装（默认，二进制来自微软 CDN，系统级目录）
+#     GitHub    = 从 GitHub 下载官方「解压即用」zip 包到自定义 runtime 目录（与 Install-Node 同套约定）
 # 说明（与 Install-Node.ps1 / Install-Go.ps1 同一套约定）：
 #   1) 统一用 Write-Output 输出（走 success stream / stdout），避免重定向场景下日志丢失。
 #   2) 下载用 HttpWebRequest 流式读取，在主线程每 5 秒打印一次进度。
 #   3) zip 用系统 ZipFile 解压。
-#   4) 版本通过 GitHub API 查 PowerShell/PowerShell 的 releases，匹配所选大版本（如 7.5）的最新稳定补丁版
-#      （排除 preview/rc 等预发布；stable 的 tag 形如 v7.5.0）。
+#   4) 版本解析：GitHub 源通过 api.github.com 查 PowerShell/PowerShell 的 releases，匹配所选大版本（如 7.5）的最新稳定补丁版
+#      （排除 preview/rc 等预发布；stable 的 tag 形如 v7.5.0）；Microsoft 源通过 WinGet（Microsoft.PowerShell）安装，
+#      版本固定为所选大版本的 .0 正式版（如 7.5.0），二进制来自微软官方渠道。
 #   5) 覆盖原文件=否（默认）：安装目录已有同大版本 PowerShell 目录时跳过下载解压直接复用；=是 则先删再装。
 #   6) PATH 通过 SCRIPT_MANAGER_ENV 聚合变量统一管理：Path 写入实际路径（CMD 不展开自定义 %VAR% 引用），
 #      SCRIPT_MANAGER_ENV 单独保留作为聚合记录。
@@ -28,21 +32,24 @@ function Say { param([string]$Text = '') Write-Output $Text }
 function SayC { param([string]$Color, [string]$Tag, [string]$Text) Write-Output "$Color[$Tag]$RESET $Text" }
 
 # ---- 入参（工具在执行前把 _p{XXX} 占位符替换为用户的输入值）----
-$InstallDir = "_p{INSTALL_DIR}"
-$Version    = "_p{VERSION}"
-$Overwrite  = "_p{OVERWRITE}"
-$AddToPath  = "_p{SET_PATH}"
+$InstallDir     = "_p{INSTALL_DIR}"
+$Version        = "_p{VERSION}"
+$DownloadSource = "_p{DOWNLOAD_SOURCE}"
+$Overwrite      = "_p{OVERWRITE}"
+$AddToPath      = "_p{SET_PATH}"
 
 # 缺省兜底：用户未填时给一个合理默认，避免空值导致后续解析报错
-if ([string]::IsNullOrWhiteSpace($Version))   { $Version = 'PowerShell 7.5' }
-if ([string]::IsNullOrWhiteSpace($Overwrite)) { $Overwrite = '否' }
-if ([string]::IsNullOrWhiteSpace($AddToPath)) { $AddToPath = '是' }
+if ([string]::IsNullOrWhiteSpace($Version))        { $Version = 'PowerShell 7.6 (LTS)' }
+if ([string]::IsNullOrWhiteSpace($DownloadSource)) { $DownloadSource = 'Microsoft' }
+if ([string]::IsNullOrWhiteSpace($Overwrite))      { $Overwrite = '否' }
+if ([string]::IsNullOrWhiteSpace($AddToPath))      { $AddToPath = '是' }
 
 Say '=========================================='
-Say ' 自动安装 PowerShell 7（官方解压即用包）'
+Say ' 自动安装 PowerShell 7'
 Say '=========================================='
 SayC $GREEN '入参' "安装目录: $InstallDir"
 SayC $GREEN '入参' "PowerShell 版本: $Version"
+SayC $GREEN '入参' "下载源: $DownloadSource"
 SayC $GREEN '入参' "覆盖原文件: $Overwrite"
 SayC $GREEN '入参' "追加到 PATH: $AddToPath"
 
@@ -59,6 +66,10 @@ if ([string]::IsNullOrWhiteSpace($InstallDir)) {
 }
 if ($Overwrite -ne '是' -and $Overwrite -ne '否') {
     SayC $RED '异常' "覆盖原文件取值无效「$Overwrite」，应为 是/否"
+    exit 1
+}
+if ($DownloadSource -ne 'Microsoft' -and $DownloadSource -ne 'GitHub') {
+    SayC $RED '异常' "下载源取值无效「$DownloadSource」，应为 Microsoft / GitHub"
     exit 1
 }
 # 从版本选项（如 "PowerShell 7.5"、"PowerShell 7.4 (LTS)"）中提取大版本号（如 7.5）
@@ -110,6 +121,164 @@ function Test-IsPwshHomePath {
     if ($s -notmatch '\\PowerShell-(\d+\.\d+)\.\d+-win-(x64|arm64)$') { return $false }
     if (-not (Test-Path (Join-Path $s 'pwsh.exe'))) { return $false }
     return $true
+}
+
+# ---- GitHub 源：下载官方「解压即用」zip 包到自定义目录，返回解压出的 PowerShell 目录绝对路径 ----
+# 失败时直接 exit 1（该分支本就是 GitHub 源或被 Microsoft 源回退调用，无需再返回 $null）
+function Install-ViaGitHub {
+    param([string]$Major, [string]$InstallDir, [string]$Overwrite)
+    # 覆盖模式：先删除同大版本的旧 PowerShell 目录
+    if ($Overwrite -eq '是') {
+        $oldPwsh = Find-MatchingPwsh -Dir $InstallDir -Major $Major
+        if ($oldPwsh) {
+            SayC $YELLOW '信息' "覆盖模式：删除旧目录 $($oldPwsh.FullName)"
+            try {
+                Remove-Item -Path $oldPwsh.FullName -Recurse -Force -ErrorAction Stop
+            } catch {
+                SayC $RED '异常' "删除旧目录失败: $($_.Exception.Message)"
+                SayC $RED '异常' '请先关闭占用该目录的程序（如正在运行的 pwsh 进程），或手动删除后重试'
+                exit 1
+            }
+        }
+    }
+
+    # ---- 通过 GitHub API 查该大版本的最新稳定 release（排除 preview/rc 预发布）----
+    [Net.ServicePointManager]::SecurityProtocol = [Net.SecurityProtocolType]::Tls12
+    $downloadUrl = $null
+    $pwshVer = $null
+    SayC $YELLOW '信息' "从 GitHub 查询 PowerShell $Major 的最新稳定版本..."
+    try {
+        $releases = Invoke-RestMethod -Uri 'https://api.github.com/repos/PowerShell/PowerShell/releases?per_page=100' `
+            -Headers @{ 'User-Agent' = 'knife-script-manager' } -TimeoutSec 30
+        $hit = $releases | Where-Object {
+            $_.prerelease -eq $false -and $_.tag_name -like "v$Major.*"
+        } | Select-Object -First 1
+        if (-not $hit) {
+            SayC $RED '异常' "未找到 PowerShell $Major 的稳定 release，请确认大版本号（如 7.5 / 7.4 / 7.2）"
+            exit 1
+        }
+        $pwshVer = $hit.tag_name.TrimStart('v')
+        $downloadUrl = "https://github.com/PowerShell/PowerShell/releases/download/v$pwshVer/PowerShell-$pwshVer-win-$pwshArch.zip"
+    } catch {
+        SayC $RED '异常' "查询 PowerShell 版本信息失败: $($_.Exception.Message)"
+        SayC $RED '异常' '请检查网络（需可访问 GitHub API），或稍后重试'
+        exit 1
+    }
+    SayC $YELLOW '信息' "PowerShell 版本: $pwshVer，下载链接: $downloadUrl"
+
+    # ---- 下载（流式 + 进度）----
+    $tmpDir = Join-Path $env:TEMP 'script-manager-pwsh'
+    if (-not (Test-Path $tmpDir)) { New-Item -ItemType Directory -Path $tmpDir -Force | Out-Null }
+
+    $fs = $null
+    $zipPath = Join-Path $tmpDir "PowerShell-$pwshVer-win-$pwshArch.zip"
+    try {
+        $req = [System.Net.HttpWebRequest]::Create($downloadUrl)
+        $req.Timeout = 60000
+        $req.UserAgent = 'knife-script-manager'
+        $resp = $req.GetResponse()
+        $total = $resp.ContentLength
+        $stream = $resp.GetResponseStream()
+        $fs = New-Object System.IO.FileStream($zipPath, [System.IO.FileMode]::Create, [System.IO.FileAccess]::Write)
+        $buffer = New-Object byte[] (1024 * 256)
+        $read = 0
+        $nextReport = [DateTime]::Now.AddSeconds(5)
+        SayC $YELLOW '信息' "开始下载: PowerShell-$pwshVer-win-$pwshArch.zip（约 $([math]::Round($total / 1MB, 1)) MB）"
+        while (($n = $stream.Read($buffer, 0, $buffer.Length)) -gt 0) {
+            $fs.Write($buffer, 0, $n)
+            $read += $n
+            if ([DateTime]::Now -ge $nextReport) {
+                if ($total -gt 0) {
+                    $pct = [int](($read * 100) / $total)
+                    SayC $YELLOW '信息' "下载进度: $pct%（$([math]::Round($read / 1MB, 1)) / $([math]::Round($total / 1MB, 1)) MB）"
+                } else {
+                    SayC $YELLOW '信息' "下载进度: 已下载 $([math]::Round($read / 1MB, 1)) MB"
+                }
+                $nextReport = [DateTime]::Now.AddSeconds(5)
+            }
+        }
+        $fs.Close(); $fs = $null
+        $stream.Close()
+        $resp.Close()
+    } catch {
+        if ($fs) { $fs.Close() }
+        SayC $RED '异常' "下载失败: $($_.Exception.Message)"
+        SayC $RED '异常' '请检查网络（需可访问 GitHub），或确认该版本包可用'
+        exit 1
+    }
+    SayC $GREEN '结果' "下载完成: $zipPath"
+
+    # ---- 解压（ZipFile）----
+    Add-Type -AssemblyName System.IO.Compression.FileSystem -ErrorAction SilentlyContinue
+    SayC $YELLOW '信息' "解压到: $InstallDir（请稍候）"
+    if (-not (Test-Path $InstallDir)) {
+        New-Item -ItemType Directory -Path $InstallDir -Force | Out-Null
+    }
+    try {
+        [System.IO.Compression.ZipFile]::ExtractToDirectory($zipPath, $InstallDir)
+    } catch {
+        SayC $RED '异常' "解压失败: $($_.Exception.Message)"
+        SayC $RED '异常' '若目标位于 Program Files 等受保护目录，请换一个目录，或以管理员身份运行'
+        exit 1
+    }
+    SayC $GREEN '结果' '解压完成'
+
+    # 清理临时压缩包（失败不影响结果）
+    try { Remove-Item $zipPath -Force -ErrorAction SilentlyContinue } catch { }
+
+    # ---- 定位本次解压出的 PowerShell 目录 ----
+    $found = Find-MatchingPwsh -Dir $InstallDir -Major $Major
+    if (-not $found) {
+        SayC $RED '异常' "解压后未找到 PowerShell 目录（含 pwsh.exe），请检查目录: $InstallDir"
+        exit 1
+    }
+    return $found.FullName
+}
+
+# ---- Microsoft 源辅助：在系统 PowerShell 目录中查找已安装的 pwsh.exe（按大版本匹配）----
+function Find-WinGetPwsh {
+    param([string]$Major)
+    $roots = @('C:\Program Files\PowerShell', 'C:\Program Files (x86)\PowerShell')
+    foreach ($r in $roots) {
+        if (-not (Test-Path $r)) { continue }
+        $exe = Get-ChildItem -Path $r -Recurse -Filter pwsh.exe -ErrorAction SilentlyContinue | Select-Object -First 1
+        if ($exe) {
+            try {
+                $v = (& $exe.FullName --version 2>&1 | Out-String)
+                if ($v -match '(\d+\.\d+)' -and $Matches[1] -eq $Major) { return $exe.DirectoryName }
+            } catch { }
+        }
+    }
+    return $null
+}
+
+# ---- Microsoft 源：通过 WinGet 安装 Microsoft.PowerShell（二进制来自微软官方渠道）----
+# 返回解压/安装出的 PowerShell 目录绝对路径；失败（winget 缺失/安装异常/未找到）返回 $null，由调用方决定回退
+function Install-ViaWinGet {
+    param([string]$Major)
+    $winget = $null
+    try { $winget = Get-Command winget.exe -ErrorAction SilentlyContinue } catch { }
+    if (-not $winget) {
+        SayC $RED '异常' '未找到 winget.exe（Microsoft 源依赖 WinGet 安装 PowerShell），请先安装「应用安装程序(App Installer)」'
+        return $null
+    }
+    $wingetVer = "$Major.0"
+    SayC $YELLOW '信息' "Microsoft 源：通过 WinGet 安装 Microsoft.PowerShell 版本 $wingetVer ..."
+    SayC $YELLOW '信息' '注：WinGet 安装至系统 PowerShell 目录（默认 C:\Program Files\PowerShell\7），将忽略自定义安装目录'
+    try {
+        $p = Start-Process -FilePath 'winget.exe' -ArgumentList @(
+            'install', '--id', 'Microsoft.PowerShell', '--version', $wingetVer,
+            '--accept-package-agreements', '--accept-source-agreements', '--silent'
+        ) -Wait -PassThru -WindowStyle Hidden
+        SayC $YELLOW '信息' "WinGet 退出码: $($p.ExitCode)"
+    } catch {
+        SayC $RED '异常' "WinGet 安装异常: $($_.Exception.Message)"
+    }
+    # 无论退出码都尝试定位 pwsh.exe（已安装时 WinGet 返回特定码而非 0）
+    $home = Find-WinGetPwsh -Major $Major
+    if ($home) { return $home }
+    SayC $RED '异常' "WinGet 安装后未找到 pwsh.exe，可能安装失败或被安全策略拦截"
+    return $null
 }
 
 # 当前进程是否具备管理员权限（决定环境变量写系统级 Machine 还是用户级 User）
@@ -192,125 +361,37 @@ function Ensure-PathHasScriptManagerEnv {
     [Environment]::SetEnvironmentVariable('Path', $newPath, $Scope)
 }
 
-# ---- 主流程：已有同大版本 PowerShell 目录且不覆盖 -> 直接复用；否则重新安装 ----
-$existingPwsh = $null
-if ($Overwrite -eq '否') {
-    $existingPwsh = Find-MatchingPwsh -Dir $InstallDir -Major $major
-}
-
+# ---- 主流程：按下载源分支（Microsoft=WinGet / GitHub=便携 zip）；已存在则按需复用或重装 ----
 $pwshHome = $null
-if ($existingPwsh) {
-    SayC $YELLOW '信息' "检测到已安装 PowerShell $major : $($existingPwsh.FullName)，跳过下载与解压"
-    $pwshHome = $existingPwsh.FullName
+if ($DownloadSource -ieq 'Microsoft') {
+    # ==================== Microsoft 源：WinGet 安装（微软官方渠道）====================
+    $existingWinGet = $null
+    if ($Overwrite -eq '否') { $existingWinGet = Find-WinGetPwsh -Major $major }
+    if ($existingWinGet) {
+        SayC $YELLOW '信息' "检测到已通过 WinGet 安装 PowerShell $major : $existingWinGet，跳过安装"
+        $pwshHome = $existingWinGet
+    } else {
+        # 覆盖模式：WinGet 重装会覆盖同版本，无需手动删除
+        $wingetHome = Install-ViaWinGet -Major $major
+        if ($wingetHome) {
+            $pwshHome = $wingetHome
+        } else {
+            SayC $YELLOW '信息' "Microsoft(WinGet) 安装失败，回退到 GitHub 下载源（便携 zip）"
+            $pwshHome = Install-ViaGitHub -Major $major -InstallDir $InstallDir -Overwrite $Overwrite
+        }
+    }
 } else {
-    # 覆盖模式：先删除同大版本的旧 PowerShell 目录
-    if ($Overwrite -eq '是') {
-        $oldPwsh = Find-MatchingPwsh -Dir $InstallDir -Major $major
-        if ($oldPwsh) {
-            SayC $YELLOW '信息' "覆盖模式：删除旧目录 $($oldPwsh.FullName)"
-            try {
-                Remove-Item -Path $oldPwsh.FullName -Recurse -Force -ErrorAction Stop
-            } catch {
-                SayC $RED '异常' "删除旧目录失败: $($_.Exception.Message)"
-                SayC $RED '异常' '请先关闭占用该目录的程序（如正在运行的 pwsh 进程），或手动删除后重试'
-                exit 1
-            }
-        }
+    # ==================== GitHub 源：便携 zip（原有逻辑）====================
+    $existingPwsh = $null
+    if ($Overwrite -eq '否') {
+        $existingPwsh = Find-MatchingPwsh -Dir $InstallDir -Major $major
     }
-
-    # ---- 通过 GitHub API 查该大版本的最新稳定 release（排除 preview/rc 预发布）----
-    [Net.ServicePointManager]::SecurityProtocol = [Net.SecurityProtocolType]::Tls12
-    $downloadUrl = $null
-    $pwshVer = $null
-    SayC $YELLOW '信息' "从 GitHub 查询 PowerShell $major 的最新稳定版本..."
-    try {
-        $releases = Invoke-RestMethod -Uri 'https://api.github.com/repos/PowerShell/PowerShell/releases?per_page=100' `
-            -Headers @{ 'User-Agent' = 'knife-script-manager' } -TimeoutSec 30
-        $hit = $releases | Where-Object {
-            $_.prerelease -eq $false -and $_.tag_name -like "v$major.*"
-        } | Select-Object -First 1
-        if (-not $hit) {
-            SayC $RED '异常' "未找到 PowerShell $major 的稳定 release，请确认大版本号（如 7.5 / 7.4 / 7.2）"
-            exit 1
-        }
-        $pwshVer = $hit.tag_name.TrimStart('v')
-        $downloadUrl = "https://github.com/PowerShell/PowerShell/releases/download/v$pwshVer/PowerShell-$pwshVer-win-$pwshArch.zip"
-    } catch {
-        SayC $RED '异常' "查询 PowerShell 版本信息失败: $($_.Exception.Message)"
-        SayC $RED '异常' '请检查网络（需可访问 GitHub API），或稍后重试'
-        exit 1
+    if ($existingPwsh) {
+        SayC $YELLOW '信息' "检测到已安装 PowerShell $major : $($existingPwsh.FullName)，跳过下载与解压"
+        $pwshHome = $existingPwsh.FullName
+    } else {
+        $pwshHome = Install-ViaGitHub -Major $major -InstallDir $InstallDir -Overwrite $Overwrite
     }
-    SayC $YELLOW '信息' "PowerShell 版本: $pwshVer，下载链接: $downloadUrl"
-
-    # ---- 下载（流式 + 进度）----
-    $tmpDir = Join-Path $env:TEMP 'script-manager-pwsh'
-    if (-not (Test-Path $tmpDir)) { New-Item -ItemType Directory -Path $tmpDir -Force | Out-Null }
-
-    $fs = $null
-    $zipPath = Join-Path $tmpDir "PowerShell-$pwshVer-win-$pwshArch.zip"
-    try {
-        $req = [System.Net.HttpWebRequest]::Create($downloadUrl)
-        $req.Timeout = 60000
-        $req.UserAgent = 'knife-script-manager'
-        $resp = $req.GetResponse()
-        $total = $resp.ContentLength
-        $stream = $resp.GetResponseStream()
-        $fs = New-Object System.IO.FileStream($zipPath, [System.IO.FileMode]::Create, [System.IO.FileAccess]::Write)
-        $buffer = New-Object byte[] (1024 * 256)
-        $read = 0
-        $nextReport = [DateTime]::Now.AddSeconds(5)
-        SayC $YELLOW '信息' "开始下载: PowerShell-$pwshVer-win-$pwshArch.zip（约 $([math]::Round($total / 1MB, 1)) MB）"
-        while (($n = $stream.Read($buffer, 0, $buffer.Length)) -gt 0) {
-            $fs.Write($buffer, 0, $n)
-            $read += $n
-            # 按时间节流（每 5 秒一次）：小文件不会刷屏，大文件也不会半天不报
-            # 用 [DateTime]::Now 而非 Get-Date —— 循环每 256KB 调用一次，cmdlet 开销明显
-            if ([DateTime]::Now -ge $nextReport) {
-                if ($total -gt 0) {
-                    $pct = [int](($read * 100) / $total)
-                    SayC $YELLOW '信息' "下载进度: $pct%（$([math]::Round($read / 1MB, 1)) / $([math]::Round($total / 1MB, 1)) MB）"
-                } else {
-                    SayC $YELLOW '信息' "下载进度: 已下载 $([math]::Round($read / 1MB, 1)) MB"
-                }
-                $nextReport = [DateTime]::Now.AddSeconds(5)
-            }
-        }
-        $fs.Close(); $fs = $null
-        $stream.Close()
-        $resp.Close()
-    } catch {
-        if ($fs) { $fs.Close() }
-        SayC $RED '异常' "下载失败: $($_.Exception.Message)"
-        SayC $RED '异常' '请检查网络（需可访问 GitHub），或确认该版本包可用'
-        exit 1
-    }
-    SayC $GREEN '结果' "下载完成: $zipPath"
-
-    # ---- 解压（ZipFile）----
-    Add-Type -AssemblyName System.IO.Compression.FileSystem -ErrorAction SilentlyContinue
-    SayC $YELLOW '信息' "解压到: $InstallDir（请稍候）"
-    if (-not (Test-Path $InstallDir)) {
-        New-Item -ItemType Directory -Path $InstallDir -Force | Out-Null
-    }
-    try {
-        [System.IO.Compression.ZipFile]::ExtractToDirectory($zipPath, $InstallDir)
-    } catch {
-        SayC $RED '异常' "解压失败: $($_.Exception.Message)"
-        SayC $RED '异常' '若目标位于 Program Files 等受保护目录，请换一个目录，或以管理员身份运行'
-        exit 1
-    }
-    SayC $GREEN '结果' '解压完成'
-
-    # 清理临时压缩包（失败不影响结果）
-    try { Remove-Item $zipPath -Force -ErrorAction SilentlyContinue } catch { }
-
-    # ---- 定位本次解压出的 PowerShell 目录 ----
-    $found = Find-MatchingPwsh -Dir $InstallDir -Major $major
-    if (-not $found) {
-        SayC $RED '异常' "解压后未找到 PowerShell 目录（含 pwsh.exe），请检查目录: $InstallDir"
-        exit 1
-    }
-    $pwshHome = $found.FullName
 }
 
 $pwshExe = Join-Path $pwshHome 'pwsh.exe'
