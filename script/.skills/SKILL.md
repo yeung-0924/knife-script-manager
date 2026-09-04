@@ -379,3 +379,23 @@ Write-Host "接收参数 Name = $Name"
 
 14. **配置编辑器「未自定义」= 空 + 占位符，不要回显默认值（2026-09-05 暮云明确）**：`config.ini` 的语义是「留空 = 用内置默认」，因此编辑弹窗里未自定义项必须显示为空、只用 placeholder 提示内置默认值（如 `script\index.json` / `lib` / `0（不限制）`），**不要把默认值填进输入框**——否则用户会误以为自己改过配置。两个配套要求：① 与内置默认等价的显式配置（`lib_dir = lib`、`default_timeout = 0`）也要按「未自定义」处理，判定需归一化（统一 `\` / 去尾斜杠 / 去 `.\` 前缀 / 忽略大小写），见 `ConfigEditorWindow.xaml.cs` 的 `IsBuiltInDefault` + `NormalizePath`；② 随包的 `config.ini.example` 各项**默认全部注释掉**（`;lib_dir =`），避免新装就带一堆等于默认值的显式行。
 
+15. **内嵌式输入框的「聚焦高亮」必须画在外层 Border 上，内层 TextBox 必须无边框模板（2026-09-05 实测）**：当输入框嵌在外部 Border 里（如参数面板文件选择框、配置编辑器的路径行/超时行，与浏览/后缀按钮拼接成一体），会出现「点击后整框变蓝、但只有上/左/右边变蓝、下边框仍是灰，且右上/右下是圆角」的怪象。
+    根因：`ClearableTextBoxInline` 原先 `BasedOn ClearableTextBox → BaseTextBox`，而 `BaseTextBox` 模板在 `IsKeyboardFocusWithin` 时会把**内层那个 `Bd` 边框**描蓝、且 `CornerRadius=4`（四角圆角）。这个内层蓝边浮在外层 Border 之上，于是上/左/右被盖成蓝、底部被外层灰边压住，且圆角与外层「右侧方角、与按钮相连」的形状冲突。
+    正确做法（已落地）：① `ClearableTextBoxInline` 用**无边框模板**，只留 `ScrollViewer`，`Padding` 仍绑到其 `Margin` 保证长文本不压 ×；② 外层 Border 通过 `IsKeyboardFocusWithin` 触发器把 `BorderBrush` 改为 `BrushPrimary` 来表现聚焦。注意 **WPF 依赖属性优先级：设了 `BorderBrush` 本地属性（attribute）会盖过 Style 触发器**，所以外层 Border 必须**把 `BorderBrush` 放进 `<Border.Style>` 的 Setter/Trigger**（属性不在元素上直接写），触发器才能生效。外层 Border 的 `CornerRadius` 决定形状（拼接处 `4,0,0,4` 方右角、独立框 `4` 全圆角），聚焦高亮自动跟随该形状——上下左右一起变蓝、且方角处仍为方角。
+    ```xml
+    <Border BorderThickness="1,1,0,1" CornerRadius="4,0,0,4" ...>
+        <Border.Style>
+            <Style TargetType="Border">
+                <Setter Property="BorderBrush" Value="{DynamicResource BrushBorder}" />
+                <Style.Triggers>
+                    <Trigger Property="IsKeyboardFocusWithin" Value="True">
+                        <Setter Property="BorderBrush" Value="{DynamicResource BrushPrimary}" />
+                    </Trigger>
+                </Style.Triggers>
+            </Style>
+        </Border.Style>
+        <TextBox Style="{StaticResource ClearableTextBoxInline}" .../>
+    </Border>
+    ```
+    凡是「外层 Border + 内层 ClearableTextBoxInline」的输入框（参数面板路径框、配置编辑器各路径行/超时行）都应加这个触发器，保持一致。
+

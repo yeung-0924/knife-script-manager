@@ -35,7 +35,7 @@
                               Header="{x:Static local:Strings.BtnOpen}">
                         <MenuItem.Icon>
                             <svgc:SvgViewbox Width="13" Height="13"
-                                             UriSource='pack://application:,,,/assets/images/button/folder-open.svg' />
+                                             UriSource='pack://application:,,,/assets/images/button/file.svg' />
                         </MenuItem.Icon>
                     </MenuItem>
                     <MenuItem Command="{Binding ExportCommand}"
@@ -51,7 +51,7 @@
                               Click="MenuEditConfig_Click">
                         <MenuItem.Icon>
                             <svgc:SvgViewbox Width="13" Height="13"
-                                             UriSource='pack://application:,,,/assets/images/button/settings.svg' />
+                                             UriSource='pack://application:,,,/assets/images/button/bolt.svg' />
                         </MenuItem.Icon>
                     </MenuItem>
                 </MenuItem>
@@ -142,6 +142,9 @@
                                     </Style>
                                 </Button.Style>
                             </Button>
+                            <svgc:SvgViewbox DockPanel.Dock="Left" Width="13" Height="13"
+                                             UriSource='pack://application:,,,/assets/images/button/scroll.svg'
+                                             Margin="0,0,6,0" VerticalAlignment="Center" />
                             <TextBlock Text="{x:Static local:Strings.TitleScriptList}" Style="{StaticResource TitleText}" VerticalAlignment="Center" />
                         </DockPanel>
                     </Border>
@@ -357,6 +360,9 @@
                                             IsEnabled="{Binding IsRunning, Converter={x:Static local:InverseBoolConverter.Instance}}"
                                             Margin="0"
                                             Content="{x:Static local:Strings.BtnReset}" />
+                                    <svgc:SvgViewbox DockPanel.Dock="Left" Width="13" Height="13"
+                                                     UriSource='pack://application:,,,/assets/images/button/variable.svg'
+                                                     Margin="0,0,6,0" VerticalAlignment="Center" />
                                     <TextBlock Text="{x:Static local:Strings.TitleScriptParams}" Style="{StaticResource TitleText}" VerticalAlignment="Center" />
                                 </DockPanel>
                             </Border>
@@ -411,7 +417,8 @@
                                                                          UriSource='pack://application:,,,/assets/images/button/folder-open.svg'
                                                                          HorizontalAlignment="Center" VerticalAlignment="Center" />
                                                     </Button>
-                                                    <!-- 左侧输入框外观：右边框去掉、右圆角去掉，与右侧按钮拼合 -->
+                                                    <!-- 左侧输入框外观：右边框去掉、右圆角去掉，与右侧按钮拼合。
+                                                         聚焦时整框变蓝（右上/右下为方角，因与浏览按钮相连）。 -->
                                                     <Border BorderThickness="1,1,0,1"
                                                             CornerRadius="4,0,0,4"
                                                             SnapsToDevicePixels="True"
@@ -425,6 +432,9 @@
                                                                         <Setter Property="BorderBrush" Value="Red" />
                                                                         <Setter Property="BorderThickness" Value="1.5,1.5,0,1.5" />
                                                                     </DataTrigger>
+                                                                    <Trigger Property="IsKeyboardFocusWithin" Value="True">
+                                                                        <Setter Property="BorderBrush" Value="{DynamicResource BrushPrimary}" />
+                                                                    </Trigger>
                                                                 </Style.Triggers>
                                                             </Style>
                                                         </Border.Style>
@@ -520,7 +530,7 @@
                                                 Click="BtnScriptOptions_Click">
                                             <Button.Content>
                                                 <svgc:SvgViewbox Width="13" Height="13"
-                                                                 UriSource='pack://application:,,,/assets/images/button/settings.svg'
+                                                                 UriSource='pack://application:,,,/assets/images/button/settings-2.svg'
                                                                  VerticalAlignment="Center" HorizontalAlignment="Center" />
                                             </Button.Content>
                                             <Button.ContextMenu>
@@ -536,6 +546,9 @@
                                             </Button.ContextMenu>
                                         </Button>
                                     </StackPanel>
+                                    <svgc:SvgViewbox DockPanel.Dock="Left" Width="13" Height="13"
+                                                     UriSource='pack://application:,,,/assets/images/button/scan-eye.svg'
+                                                     Margin="0,0,6,0" VerticalAlignment="Center" />
                                     <TextBlock Text="{x:Static local:Strings.TitleScriptPreview}" Style="{StaticResource TitleText}" VerticalAlignment="Center" />
                                 </DockPanel>
                             </Border>
@@ -602,7 +615,7 @@
                                             Click="BtnLogOptions_Click">
                                         <Button.Content>
                                             <svgc:SvgViewbox Width="13" Height="13"
-                                                             UriSource='pack://application:,,,/assets/images/button/settings.svg'
+                                                             UriSource='pack://application:,,,/assets/images/button/settings-2.svg'
                                                              VerticalAlignment="Center" HorizontalAlignment="Center" />
                                         </Button.Content>
                                         <Button.ContextMenu>
@@ -618,6 +631,9 @@
                                         </Button.ContextMenu>
                                     </Button>
                                 </StackPanel>
+                                <svgc:SvgViewbox DockPanel.Dock="Left" Width="13" Height="13"
+                                                 UriSource='pack://application:,,,/assets/images/button/file-clock.svg'
+                                                 Margin="0,0,6,0" VerticalAlignment="Center" />
                                 <TextBlock Text="{x:Static local:Strings.TitleExecLog}" Style="{StaticResource TitleText}" VerticalAlignment="Center" />
                             </DockPanel>
                         </Border>

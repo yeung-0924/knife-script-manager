@@ -9,7 +9,7 @@
         Background="{DynamicResource BrushWindowBg}">
     <DockPanel Margin="16">
         <TextBlock DockPanel.Dock="Top" Text="{x:Static local:Strings.ConfigEditorNote}"
-                   Foreground="{DynamicResource BrushTextSecondary}" TextWrapping="Wrap"
+                   Foreground="{DynamicResource BrushRequired}" TextWrapping="Wrap"
                    Margin="0,0,0,12" />
 
         <!-- 底部操作条：左「默认值」一键还原，右「保存 / 取消」 -->
@@ -25,9 +25,6 @@
             </StackPanel>
         </Grid>
 
-        <TextBlock x:Name="StatusText" DockPanel.Dock="Bottom" Visibility="Collapsed"
-                   Foreground="{DynamicResource BrushPrimary}" Margin="0,0,0,8" />
-
         <StackPanel>
             <ItemsControl x:Name="Rows">
                 <ItemsControl.ItemTemplate>
@@ -39,7 +36,8 @@
                             </Grid.ColumnDefinitions>
                             <TextBlock Grid.Column="0" Text="{Binding Label}"
                                        VerticalAlignment="Center" Margin="0,0,6,0" />
-                            <!-- 与参数列表文件选择框一致：只读输入框 + 右侧「浏览」后缀按钮拼合为一体，只能选不能手输 -->
+                            <!-- 与参数列表文件选择框一致：只读输入框 + 右侧「浏览」后缀按钮拼合为一体，只能选不能手输。
+                                 外框承载边框与聚焦高亮：聚焦时整框变蓝；右侧无边框（与浏览按钮拼接），故右上/右下为方角。 -->
                             <DockPanel Grid.Column="1" LastChildFill="True">
                                 <Button DockPanel.Dock="Right" Style="{StaticResource BaseButtonLightSuffix}"
                                         Width="24" Height="24" Padding="0" Margin="0" VerticalAlignment="Center"
@@ -51,8 +49,17 @@
                                 </Button>
                                 <Border BorderThickness="1,1,0,1" CornerRadius="4,0,0,4"
                                         SnapsToDevicePixels="True" Height="24" VerticalAlignment="Center"
-                                        BorderBrush="{DynamicResource BrushBorder}"
                                         Background="{DynamicResource BrushPanelBg}">
+                                    <Border.Style>
+                                        <Style TargetType="Border">
+                                            <Setter Property="BorderBrush" Value="{DynamicResource BrushBorder}" />
+                                            <Style.Triggers>
+                                                <Trigger Property="IsKeyboardFocusWithin" Value="True">
+                                                    <Setter Property="BorderBrush" Value="{DynamicResource BrushPrimary}" />
+                                                </Trigger>
+                                            </Style.Triggers>
+                                        </Style>
+                                    </Border.Style>
                                     <Grid>
                                         <!-- ClearableTextBoxInline：边框/背景由外层 Border 绘制，右侧留白给 × 按钮 -->
                                         <TextBox Text="{Binding Value}" IsReadOnly="True"
@@ -77,7 +84,8 @@
             </ItemsControl>
 
             <!-- 默认执行超时(秒)：紧跟在「日志目录」下方，是配置编辑器内唯一允许手输的字段；
-                 留空即不限制，占位符显示「0（不限制）」，× 清除回落默认 -->
+                 留空即不限制，占位符显示「0（不限制）」，× 清除回落默认。
+                 外框为独立方框（四边/四角均圆角），聚焦时整框变蓝。 -->
             <Grid x:Name="TimeoutGrid">
                 <Grid.ColumnDefinitions>
                     <ColumnDefinition Width="104" />
@@ -87,7 +95,17 @@
                            VerticalAlignment="Center" Margin="0,0,6,0" />
                 <Border Grid.Column="1" BorderThickness="1" CornerRadius="4"
                         Height="24" VerticalAlignment="Center" SnapsToDevicePixels="True"
-                        BorderBrush="{DynamicResource BrushBorder}" Background="{DynamicResource BrushPanelBg}">
+                        Background="{DynamicResource BrushPanelBg}">
+                    <Border.Style>
+                        <Style TargetType="Border">
+                            <Setter Property="BorderBrush" Value="{DynamicResource BrushBorder}" />
+                            <Style.Triggers>
+                                <Trigger Property="IsKeyboardFocusWithin" Value="True">
+                                    <Setter Property="BorderBrush" Value="{DynamicResource BrushPrimary}" />
+                                </Trigger>
+                            </Style.Triggers>
+                        </Style>
+                    </Border.Style>
                     <Grid>
                         <TextBox Text="{Binding Value, UpdateSourceTrigger=PropertyChanged}"
                                  Style="{StaticResource ClearableTextBoxInline}"

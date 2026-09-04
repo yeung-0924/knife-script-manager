@@ -109,11 +109,10 @@ public partial class ConfigEditorWindow : Window
                 AppConfig.SetRawValue("script", row.Key, row.Value.Trim());
             AppConfig.SetRawValue("script", "default_timeout", SanitizeTimeout(_timeout.Value));
             AppConfig.Reload();
-            ShowStatus(Strings.ConfigEditorSaved);
         }
         catch (System.Exception ex)
         {
-            ShowStatus(string.Format(Strings.ConfigEditorSaveFail, ex.Message));
+            System.Diagnostics.Debug.WriteLine("保存配置失败：" + ex.Message);
         }
     }
 
@@ -130,11 +129,10 @@ public partial class ConfigEditorWindow : Window
             _timeout.Value = "";
             AppConfig.SetRawValue("script", "default_timeout", "");
             AppConfig.Reload();
-            ShowStatus(Strings.ConfigEditorRestored);
         }
         catch (System.Exception ex)
         {
-            ShowStatus(string.Format(Strings.ConfigEditorSaveFail, ex.Message));
+            System.Diagnostics.Debug.WriteLine("还原默认值失败：" + ex.Message);
         }
     }
 
@@ -167,12 +165,6 @@ public partial class ConfigEditorWindow : Window
     }
 
     private void BtnCancel_Click(object sender, RoutedEventArgs e) => Close();
-
-    private void ShowStatus(string text)
-    {
-        StatusText.Text = text;
-        StatusText.Visibility = Visibility.Visible;
-    }
 }
 
 /// <summary>配置编辑弹窗的一行绑定模型（目录/文件选择：只读展示 + 浏览/清除修改）。</summary>

@@ -230,20 +230,32 @@
         </Setter>
     </Style>
 
-    <!-- 输入框内嵌「清空 ×」按钮时的输入框样式。
+    <!-- 输入框内嵌「清空 ×」按钮时的输入框样式（独立方框、自带边框）：
          关键：右侧内边距必须留够（× 宽 14 + 右距 4 + 余量 ≥ 24）。
          BaseTextBox 的模板已把 Padding 绑到 PART_ContentHost(ScrollViewer) 的 Margin，
          而 ScrollViewer 才是文本的裁剪边界——所以内缩后长文本会被裁在 × 左侧，不会压住按钮。
-         注意：只写 Padding 而脱离 BaseTextBox 模板（改用默认模板）是无效的，文本会盖住按钮。 -->
+         聚焦时由 BaseTextBox 模板把整框（含四角圆角）描蓝。 -->
     <Style x:Key="ClearableTextBox" TargetType="TextBox" BasedOn="{StaticResource BaseTextBox}">
         <Setter Property="Padding" Value="6,0,24,0" />
     </Style>
 
     <!-- 同上，但输入框嵌在外部 Border 里（边框与背景由外层绘制，如参数面板的文件选择框、
-         配置编辑器的路径行）：此时本身不能再画边框/背景，否则出现双线。 -->
+         配置编辑器的路径行/超时行）：此时本身不能再画边框/背景，否则出现双线；
+         且聚焦高亮必须交给外层 Border（见各调用处 IsKeyboardFocusWithin 触发器），
+         因此这里用无边框模板——只保留 ScrollViewer 承载文本，Padding 仍绑到其 Margin 保证长文本不压 ×。 -->
     <Style x:Key="ClearableTextBoxInline" TargetType="TextBox" BasedOn="{StaticResource ClearableTextBox}">
         <Setter Property="BorderThickness" Value="0" />
         <Setter Property="Background" Value="Transparent" />
+        <Setter Property="Template">
+            <Setter.Value>
+                <ControlTemplate TargetType="TextBox">
+                    <ScrollViewer x:Name="PART_ContentHost"
+                                  Margin="{TemplateBinding Padding}"
+                                  VerticalAlignment="Center"
+                                  Focusable="False" />
+                </ControlTemplate>
+            </Setter.Value>
+        </Setter>
     </Style>
 
     <!-- 黄色按钮（如重置参数）；其余与 BaseButton 一致，仅配色不同 -->
