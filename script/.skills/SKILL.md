@@ -277,6 +277,8 @@ Write-Host "接收参数 Name = $Name"
   - 安全做法：局部变量用更具描述性的名字（如 `$pwshHome`、`$installDir`），避开上述保留名。
 - **占位符 `_p{NAME}` 与语言自身变量不冲突**：程序只识别 `_p{}`，不会误伤 `${}`、Python f-string、`$Env:XXX` 等原生语法。
 - **PowerShell 里改文件/目录属性、操作受限路径时，优先 `try/catch + ErrorActionPreference='Stop'`**，避免单步失败被静默吞掉。
+- **函数内 `exit 1` 会直接终止整个脚本**（即使以 `$x = Func` 方式调用），不能作为"返回错误"用**。需要让调用方决定是否回退/收口时，函数应 `return $null`（或返回错误对象），由主流程统一判断；否则失败被赋成 `$null` 一路漏到下游，会抛出含糊的「参数绑定为 null」错误。`exit 1` 只适合「脚本必须立即停止」的硬错误（如参数非法）。
+- **PowerShell 7 经 WinGet 安装时，`winget.exe` 是 App Execution Alias，在管理员提权/非交互环境常不在 PATH**。定位时除了 `Get-Command winget.exe`，应回退到 `$env:LOCALAPPDATA\Microsoft\WindowsApps\winget.exe`；且 `--scope machine` 安装才落入 `C:\Program Files\PowerShell`，每用户安装则在 `LocalAppData\Microsoft\PowerShell`，查找 pwsh.exe 时需两者都覆盖。
 
 
 ---
