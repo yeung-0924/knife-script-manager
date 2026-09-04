@@ -25,13 +25,12 @@ knife-script-manager/
 
 | 键 | 含义 | 默认值 |
 |---|---|---|
-| `default_script_file` | 默认脚本索引文件（指向 `index.json`） | `script\index.json` |
+| `script_index_file` | 脚本索引文件（指向 `index.json`）；「文件▸打开」与「设置▸编辑配置」写同一键 | `script\index.json` |
 | `lib_dir` | 第三方依赖目录（注入环境变量 `SCRIPT_MANAGER_LIB`） | `lib` |
 | `runtime_dir` | 运行时安装目录（注入环境变量 `SCRIPT_MANAGER_RUNTIME`） | `runtime` |
 | `cache_dir` | 缓存目录 | `cache` |
 | `log_dir` | 日志目录（如 `error.log`） | `log` |
 | `default_timeout` | 脚本默认执行超时（秒，0/留空=不限制） | `0` |
-| `user_script_file` | 「打开」按钮选择的索引文件（程序自动写入；留空则回退默认） | （空） |
 
 路径规则：相对路径相对 exe 目录解析；绝对路径（含 UNC 如 `\\Mac\Home\...`）直接使用。仓库提供了 `config.ini.example` 模板（含注释），复制为 `config/config.ini` 即可生效；修改后重启程序生效。
 
@@ -42,7 +41,7 @@ exe 启动后只加载**一处**脚本：默认是 exe 同级的 `script/` 目�
 - `script/` 与 `ScriptManager.exe` 同级分发，**不嵌入 exe**（改脚本无需重新构建）。
 - 增删脚本、改 `.ps1`、改 `index.json` 均即时生效（重启 exe 即可）。
 - 若 `index.json` 缺失或解析为空，目录树不渲染，不会崩溃。
-- 想加载其它位置的脚本：点工具栏「打开」按钮，直接选择任意目录下的 `index.json` 文件；该选择会自动写入 `config.ini` 的 `user_script_file`，重启后仍自动加载（文件失效则回退默认）。
+- 想加载其它位置的脚本：点工具栏「打开」按钮，直接选择任意目录下的 `index.json` 文件；该选择会自动写入 `config.ini` 的 `script_index_file`，重启后仍自动加载（与「设置▸编辑配置▸脚本索引文件」写同一键、效果一致）。
 
 **导出**（左侧"导出"按钮）：把整个 `script/` 目录原样复制到用户选择的目录（时间戳命名，重复导出不覆盖），结构保持 `script/`（含 `index.json` 与脚本），导出成功后自动打开资源管理器并选中该目录。
 

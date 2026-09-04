@@ -28,7 +28,7 @@ public partial class ConfigEditorWindow : Window
         InitializeComponent();
         // 第四参数为「默认相对路径」（即未自定义时 AppConfig 实际使用的相对默认值），仅作占位提示；
         // 真实值永远存在 config.ini 的 [script] 节里（空 = 使用此相对默认），故内部值留空即可。
-        _rows.Add(MakeRow("default_script_file", "默认脚本索引文件", "file", "script\\index.json"));
+        _rows.Add(MakeRow("script_index_file", "脚本索引文件", "file", "script\\index.json"));
         _rows.Add(MakeRow("lib_dir", "第三方依赖目录", "folder", "lib"));
         _rows.Add(MakeRow("runtime_dir", "运行时安装目录", "folder", "runtime"));
         _rows.Add(MakeRow("cache_dir", "缓存目录", "folder", "cache"));

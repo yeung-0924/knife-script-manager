@@ -29,7 +29,7 @@ public class MainViewModel : ViewModelBase
     private const double TopRegionHeight = 400;
     #endregion
 
-    /// <summary>当前加载的脚本索引 json 路径：默认内置 script/index.json；通过「打开」按钮可切换为任意脚本目录。</summary>
+    /// <summary>当前加载的脚本索引 json 路径：默认 exe 同级 script/index.json；可由 config.ini 的 [script] script_index_file 配置，或通过「打开」按钮切换。</summary>
     private string _loadedIndexPath = ConfigLoader.ScriptIndexJson;
 
     #region 按脚本路径缓存的运行态（参数值 + 日志）
@@ -390,7 +390,7 @@ public class MainViewModel : ViewModelBase
         _elapsedTimer.Tick += (_, _) => UpdateElapsedText();
 
         RuntimeConfig.EnsureAutoDetected();
-        // 启动优先加载「打开」持久化的脚本目录；若该目录已失效（无 index.json）则回退到默认内置 script 目录
+        // 启动加载配置的脚本索引：取 [script] script_index_file（默认内置 script/index.json）；「打开」与配置编辑器写同一键
         LoadTreeFromIndex(ResolveStartupIndex());
         RefreshRuntimeStatus();
 
@@ -451,16 +451,10 @@ public class MainViewModel : ViewModelBase
     // 展开状态持久化到 cache/tree-state.json（见 TreeStateCache），不再存内存字典，故重启后仍可恢复
 
     /// <summary>
-    /// 解析启动时应加载的索引 json：优先用 config.ini 持久化的「打开」文件（[script] user_script_file），
-    /// 仅当该文件确实存在时才采用；否则回退到默认 default_script_file，保证重启后总有可用脚本树。
+    /// 解析启动时应加载的索引 json：取配置 [script] script_index_file（默认 exe 同级 script\index.json）。
+    /// 该值由「文件▸打开」与「设置▸编辑配置▸脚本索引文件」共同维护，二者写同一键、效果一致。
     /// </summary>
-    private static string ResolveStartupIndex()
-    {
-        var userIdx = AppConfig.UserScriptFilePath;
-        if (!string.IsNullOrEmpty(userIdx) && File.Exists(userIdx))
-            return userIdx;
-        return ConfigLoader.ScriptIndexJson;
-    }
+    private static string ResolveStartupIndex() => AppConfig.ScriptIndexJsonPath;
 
     /// <summary>
     /// 「打开」按钮：弹出文件选择框，直接选择脚本索引文件 index.json（结构同内置 script 目录的 index.json）。
@@ -486,8 +480,9 @@ public class MainViewModel : ViewModelBase
         LoadTreeFromIndex(indexPath);
         if (items.Count > 0)
         {
-            // 持久化到 config.ini 的 [script] user_script_file，使重启后仍自动加载该索引文件
-            AppConfig.SetUserScriptFilePath(indexPath);
+            // 持久化到 config.ini 的 [script] script_index_file，使重启后仍自动加载该索引文件。
+            // 与「设置▸编辑配置▸脚本索引文件」写的是同一个键，效果一致。
+            AppConfig.SetScriptIndexFile(indexPath);
             ShowTemporaryStatus(Strings.StatusOpenScriptFileDone);
         }
         else

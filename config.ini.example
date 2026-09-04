@@ -3,12 +3,10 @@
 ; 修改后重启程序生效。
 
 [script]
-; 默认脚本索引文件（指向 index.json，结构见 README）：相对 exe 则用相对路径（如 script\index.json）；绝对/UNC 直接用。
+; 脚本索引文件（指向 index.json，结构见 README）：相对 exe 则用相对路径（如 script\index.json）；绝对/UNC 直接用。
 ; 留空或注释则用默认 script\index.json。
-default_script_file = script\index.json
-; 用户通过「打开」按钮选择的脚本索引文件（程序自动写入，可选）：留空/注释则启动时回退到 default_script_file。
-; 程序在用户用「打开」按钮选择有效的 index.json 后写入此处（绝对路径）；该文件失效（被删/损坏）时启动回退到默认。
-; user_script_file =
+; 该项是「文件▸打开」与「设置▸编辑配置▸脚本索引文件」的唯一共同出口，二者写同一键、效果一致。
+script_index_file = script\index.json
 ; 第三方依赖目录（默认：exe 同级 lib；注入环境变量 SCRIPT_MANAGER_LIB 供脚本引用）
 lib_dir = lib
 ; 运行时安装目录（默认：exe 同级 runtime；注入环境变量 SCRIPT_MANAGER_RUNTIME 供安装脚本默认使用）

@@ -9,14 +9,14 @@ namespace ScriptManager;
 /// <summary>
 /// 用户侧配置：读取 exe 同级的 config/config.ini。修改后重启程序生效。
 /// 当前支持（[script] 节）：
-///   default_script_file = 默认脚本索引文件（指向 index.json，默认 script\index.json；相对路径相对 exe 目录，绝对/UNC 直接用）
-///   user_script_file    = 用户通过「打开」按钮选择的脚本索引文件（程序自动写入；留空则回退 default_script_file）
+///   script_index_file = 脚本索引文件（指向 index.json，默认 script\index.json；相对路径相对 exe 目录，绝对/UNC 直接用）
 ///   lib_dir    = 第三方依赖目录（默认 lib，如 JDBC jar；注入环境变量 SCRIPT_MANAGER_LIB）
 ///   runtime_dir = 运行时安装目录（默认 runtime；注入环境变量 SCRIPT_MANAGER_RUNTIME，供安装脚本默认使用）
 ///   cache_dir  = 缓存文件目录（默认 cache）
 ///   log_dir    = 日志文件目录（默认 log，如 error.log）
 ///   default_timeout = 脚本默认执行超时（秒，0/留空=不限制）
 /// 路径规则：留空/被注释则使用默认值；填相对路径则相对 exe 目录解析；填绝对路径（含 UNC 如 \\Mac\Home\...）则直接使用。
+/// script_index_file 是「文件▸打开」与「设置▸编辑配置▸脚本索引文件」的唯一共同出口，二者写同一键、效果一致。
 /// 后续新增配置项，在此追加对应的静态属性并从 Sections 取值即可。
 /// </summary>
 public static class AppConfig
@@ -45,14 +45,15 @@ public static class AppConfig
     }
 
     /// <summary>
-    /// 默认脚本索引文件（指向 index.json）的完整路径，来自配置的 [script] default_script_file。
+    /// 脚本索引文件（指向 index.json）的完整路径，来自配置的 [script] script_index_file。
     /// 留空/注释则默认 exe 同级 script\index.json；相对路径相对 exe 目录解析；绝对路径（含 UNC）直接使用。
+    /// 该项是「文件▸打开」与「设置▸编辑配置▸脚本索引文件」的唯一共同出口，二者写同一键、效果一致。
     /// </summary>
-    public static string DefaultScriptFilePath
+    public static string ScriptIndexFilePath
     {
         get
         {
-            var raw = GetValue("script", "default_script_file")?.Trim();
+            var raw = GetValue("script", "script_index_file")?.Trim();
             if (string.IsNullOrWhiteSpace(raw))
                 return Path.GetFullPath(Path.Combine(ExeDir, "script", "index.json"));
             return Path.IsPathRooted(raw)
@@ -61,8 +62,8 @@ public static class AppConfig
         }
     }
 
-    /// <summary>脚本目录路径 = 默认脚本索引文件所在目录（由 DefaultScriptFilePath 推导）。</summary>
-    public static string ScriptDir => Path.GetDirectoryName(DefaultScriptFilePath) ?? Path.Combine(ExeDir, "script");
+    /// <summary>脚本目录路径 = 脚本索引文件所在目录（由 ScriptIndexFilePath 推导）。</summary>
+    public static string ScriptDir => Path.GetDirectoryName(ScriptIndexFilePath) ?? Path.Combine(ExeDir, "script");
 
     /// <summary>第三方依赖目录（来自配置的 lib_dir，默认 exe 同级 lib；注入环境变量 SCRIPT_MANAGER_LIB 供脚本引用）。</summary>
     public static string LibDir => ResolveDir("script", "lib_dir", "lib");
@@ -93,36 +94,19 @@ public static class AppConfig
         }
     }
 
-    /// <summary>脚本索引 json 的完整路径（固定为 DefaultScriptFilePath）。</summary>
-    public static string ScriptIndexJsonPath => DefaultScriptFilePath;
+    /// <summary>脚本索引 json 的完整路径（固定为 ScriptIndexFilePath）。</summary>
+    public static string ScriptIndexJsonPath => ScriptIndexFilePath;
 
     /// <summary>
-    /// 最近一次「打开」按钮选择的脚本索引文件（index.json）绝对路径。
-    /// 为空表示未持久化（或所选文件已被移除），启动时回退到默认 default_script_file。
-    /// 仅用于记住用户选择，使重启后自动加载该文件；不影响其它配置项。
-    /// 相对路径按 exe 目录解析（与 default_script_file 一致），绝对路径（含 UNC）直接使用。
+    /// 运行时持久化「文件▸打开」选择的脚本索引文件到 config.ini 的 [script] script_index_file（存绝对路径）。
+    /// 与「设置▸编辑配置▸脚本索引文件」写的是同一个键，二者效果一致；保留其它 section / key / 注释与顺序；
+    /// 文件或 [script] 节不存在则创建。同时更新内存缓存，使同进程内 ScriptIndexFilePath 即时反映新值。
+    /// 写入失败仅记调试日志、不抛异常。
     /// </summary>
-    public static string UserScriptFilePath
-    {
-        get
-        {
-            var raw = GetValue("script", "user_script_file")?.Trim();
-            if (string.IsNullOrWhiteSpace(raw)) return "";
-            return Path.IsPathRooted(raw)
-                ? Path.GetFullPath(raw)
-                : Path.GetFullPath(Path.Combine(ExeDir, raw));
-        }
-    }
-
-    /// <summary>
-    /// 运行时持久化「打开」选择的脚本索引文件到 config.ini 的 [script] user_script_file（存绝对路径）。
-    /// 保留其它 section / key / 注释与顺序；文件或 [script] 节不存在则创建。
-    /// 同时更新内存缓存，使同进程内 UserScriptFilePath 即时反映新值。写入失败仅记调试日志、不抛异常。
-    /// </summary>
-    public static void SetUserScriptFilePath(string file)
+    public static void SetScriptIndexFile(string file)
     {
         if (string.IsNullOrWhiteSpace(file)) return;
-        SetRawValue("script", "user_script_file", Path.GetFullPath(file));
+        SetRawValue("script", "script_index_file", Path.GetFullPath(file));
     }
 
     /// <summary>
@@ -263,6 +247,14 @@ public static class AppConfig
                     map[current!][key] = val;
                 }
             }
+
+            // 兼容重命名：旧版用 user_script_file 持久化「打开」选择，新版统一为 script_index_file。
+            // 若新键缺失而旧键存在，内存中复用旧值（不强制改写磁盘），避免升级后丢失用户已选索引文件。
+            foreach (var section in map.Values)
+                if (!section.ContainsKey("script_index_file")
+                    && section.TryGetValue("user_script_file", out var legacy)
+                    && !string.IsNullOrWhiteSpace(legacy))
+                    section["script_index_file"] = legacy!;
         }
         catch (Exception ex)
         {

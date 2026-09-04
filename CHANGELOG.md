@@ -11,6 +11,10 @@
   - 标题去掉「 - config.ini」后缀；移除原「默认：…」说明行。
 - 参数下拉框：切换其他窗口不再置顶屏幕；点击输入框或选项之外任意位置即收起。
 
+### 配置（config.ini）
+- 脚本索引由双键（`default_script_file` + `user_script_file`）合并为单一 `script_index_file`：移除 `default_script_file`；原 `user_script_file` 重命名为 `script_index_file`（旧值自动迁移）。默认值仍为 `script\setminus.json`。
+- 「文件▸打开」与「设置▸编辑配置▸脚本索引文件」现在写同一个键、效果完全一致；配置编辑器首行 label 改为「脚本索引文件」。
+
 ### 脚本运行时
 - 运行时环境检测改为逐项流式输出（不再憋约 10 秒后一次性刷出）。
 - 安装脚本（PS7 / Java / Node / Python / Go / Rust）标题对齐 index.json 名称；PS7 下载源尊重用户所选、失败如实提示原因与建议（不再回退 GitHub 源）。
