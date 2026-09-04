@@ -1,4 +1,4 @@
-# 更新时间: 2026-09-04 15:47:42
+# 更新时间: 2026-09-04 16:57:08
 # Install-Powershell7.ps1 - 安装 PowerShell 7（含 pwsh.exe）
 #   下载源（DOWNLOAD_SOURCE）：
 #     Microsoft = 通过 WinGet（Microsoft.PowerShell）从微软官方渠道安装（默认，二进制来自微软 CDN，系统级目录）
@@ -116,7 +116,7 @@ try {
     }
 } catch { }
 if (-not [string]::IsNullOrWhiteSpace($updateTime)) {
-    SayC $YELLOW '脚本' "更新时间: $updateTime"
+    SayC $YELLOW '信息' "更新时间: $updateTime"
 }
 SayC $GREEN '入参' "安装目录: $InstallDir"
 SayC $GREEN '入参' "PowerShell 版本: $Version"
@@ -456,9 +456,11 @@ if ([string]::IsNullOrWhiteSpace($pwshHome)) {
     SayC $RED '异常' "排查建议：① 确认本机已安装「应用安装程序(App Installer)」且可联网；② 或改用「下载源=GitHub」并确保可访问 github.com（含镜像）；③ 亦可手动从 https://github.com/PowerShell/PowerShell/releases 下载便携 zip 解压"
     exit 1
 }
-# 兜底：上方已统一收口 $null 情况，这里再保险一次，避免任何路径下把 $null 传入 Join-Path 抛含糊错误
+# 兜底：上方已统一收口 $null 情况；此处再在「失败点」保险一次——绝不直接把 $null 传给 Join-Path，
+# 否则会抛出含糊的「Cannot bind argument to parameter 'Path' because it is null」。即便上游收口被绕过，
+# 也输出明确错误并退出，而不是崩溃。
 if ([string]::IsNullOrWhiteSpace($pwshHome)) {
-    SayC $RED '异常' "内部错误：pwshHome 为空，无法拼接 pwsh.exe 路径，已终止（请检查 Microsoft/WinGet 源与网络连通性）"
+    SayC $RED '异常' "未能确定 PowerShell 安装目录（pwshHome 为空），安装未成功，已终止"
     exit 1
 }
 $pwshExe = Join-Path $pwshHome 'pwsh.exe'

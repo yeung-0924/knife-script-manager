@@ -1,4 +1,4 @@
-# 更新时间: 2026-09-04 15:58:45
+# 更新时间: 2026-09-04 16:57:08
 # Update-Firewall.ps1 - 按用户选择更新 Windows 防火墙（域网络 / 专用网络 / 公用网络）配置
 #
 # 三个参数均为下拉框（启用 / 禁用），由程序代入后执行：
@@ -72,7 +72,7 @@ try {
     }
 } catch { }
 if (-not [string]::IsNullOrWhiteSpace($updateTime)) {
-    SayC $YELLOW '脚本' "更新时间: $updateTime"
+    SayC $YELLOW '信息' "更新时间: $updateTime"
 }
 Say ''
 

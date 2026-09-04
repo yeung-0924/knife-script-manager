@@ -1,4 +1,4 @@
-# 更新时间: 2026-09-04 15:58:45
+# 更新时间: 2026-09-04 16:57:08
 # Get-FileEncoding.ps1 - 获取文件编码：递归扫描目录下的所有文件，检测并显示其字符编码
 # 参数（由程序代入，占位符 _p{XXX}）：
 #   PATH - 文件或目录路径（必填）
@@ -328,7 +328,7 @@ try {
     }
 } catch { }
 if (-not [string]::IsNullOrWhiteSpace($updateTime)) {
-    SayC $YELLOW '脚本' "更新时间: $updateTime"
+    SayC $YELLOW '信息' "更新时间: $updateTime"
 }
 SayC $GREEN '入参' ("路径: {0}" -f $rootFullName)
 SayC $GREEN '入参' ("文件名: {0}" -f $(if ($nameFilter) { $nameFilter } else { '(空，不筛选)' }))

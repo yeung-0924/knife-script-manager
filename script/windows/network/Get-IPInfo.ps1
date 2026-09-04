@@ -1,4 +1,4 @@
-# 更新时间: 2026-09-04 15:58:45
+# 更新时间: 2026-09-04 16:57:08
 # Get-IPInfo.ps1 - 显示本机网络适配器与 IP 信息
 # 说明（两个关键健壮性处理）：
 #   1) 统一用 Write-Output 输出（写入 success stream / stdout）。
@@ -54,7 +54,7 @@ try {
     }
 } catch { }
 if (-not [string]::IsNullOrWhiteSpace($updateTime)) {
-    SayC $YELLOW '脚本' "更新时间: $updateTime"
+    SayC $YELLOW '信息' "更新时间: $updateTime"
 }
 
 # 1) 主要 IP：取「有默认路由」的接口 IPv4——这是对外通信实际使用的地址，最常被需要

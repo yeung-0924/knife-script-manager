@@ -1,4 +1,4 @@
-# 更新时间: 2026-09-04 15:58:45
+# 更新时间: 2026-09-04 16:57:08
 # Get-SystemInfo.ps1 - 显示本机系统信息（操作系统 / CPU / 内存 / 显卡 / 磁盘）
 # 说明（与 Get-IPInfo.ps1 相同的两个关键健壮性处理）：
 #   1) 统一用 Write-Output 输出（写入 success stream / stdout）。
@@ -78,7 +78,7 @@ try {
     }
 } catch { }
 if (-not [string]::IsNullOrWhiteSpace($updateTime)) {
-    SayC $YELLOW '脚本' "更新时间: $updateTime"
+    SayC $YELLOW '信息' "更新时间: $updateTime"
 }
 
 # 1) 操作系统

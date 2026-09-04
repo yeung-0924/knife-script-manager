@@ -1,4 +1,4 @@
-# 更新时间: 2026-09-04 15:58:45
+# 更新时间: 2026-09-04 16:57:08
 # Install-Node.ps1 - 从 nodejs.org 下载并安装 Node.js（LTS 大版本，解压即用）
 # 说明（与 Install-Java.ps1 / Install-Python.ps1 同一套约定）：
 #   1) 统一用 Write-Output 输出（走 success stream / stdout），避免重定向场景下日志丢失。
@@ -50,7 +50,7 @@ try {
     }
 } catch { }
 if (-not [string]::IsNullOrWhiteSpace($updateTime)) {
-    SayC $YELLOW '脚本' "更新时间: $updateTime"
+    SayC $YELLOW '信息' "更新时间: $updateTime"
 }
 SayC $GREEN '入参' "安装目录: $InstallDir"
 SayC $GREEN '入参' "Node 版本: $Version"

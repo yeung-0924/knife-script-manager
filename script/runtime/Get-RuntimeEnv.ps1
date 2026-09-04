@@ -1,4 +1,4 @@
-# 更新时间: 2026-09-04 15:58:45
+# 更新时间: 2026-09-04 16:57:08
 # Get-RuntimeEnv.ps1 - 检测本机各语言运行时版本与可执行文件路径（未配置环境的语言输出为空）
 # 说明（关键健壮性处理）：
 #   1) 统一用 Write-Output 输出（走 success stream / stdout），与 Get-SystemInfo.ps1 同款处理。
@@ -130,7 +130,7 @@ try {
     }
 } catch { }
 if (-not [string]::IsNullOrWhiteSpace($updateTime)) {
-    SayC $YELLOW '脚本' "更新时间: $updateTime"
+    SayC $YELLOW '信息' "更新时间: $updateTime"
 }
 SayC $YELLOW '信息' '各语言运行时版本与可执行文件路径'
 Say ''

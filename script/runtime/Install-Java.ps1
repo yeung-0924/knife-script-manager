@@ -1,4 +1,4 @@
-# 更新时间: 2026-09-04 15:58:45
+# 更新时间: 2026-09-04 16:57:08
 # Install-Java.ps1 - 按选择的发行版（Oracle OpenJDK / Microsoft OpenJDK / Alibaba Dragonwell）与版本下载并安装 JDK
 # 说明（几个关键健壮性处理）：
 #   1) 统一用 Write-Output 输出（走 success stream / stdout）。
@@ -63,7 +63,7 @@ try {
     }
 } catch { }
 if (-not [string]::IsNullOrWhiteSpace($updateTime)) {
-    SayC $YELLOW '脚本' "更新时间: $updateTime"
+    SayC $YELLOW '信息' "更新时间: $updateTime"
 }
 SayC $GREEN '入参' "发行版: $Distro"
 SayC $GREEN '入参' "安装目录: $InstallDir"

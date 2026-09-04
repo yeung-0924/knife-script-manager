@@ -1,4 +1,4 @@
-# 更新时间: 2026-09-04 15:58:45
+# 更新时间: 2026-09-04 16:57:08
 # Get-PortUsage.ps1 - 查看当前运行的进程占用的 TCP 端口
 # 参数（由程序代入，占位符 _p{NAME}）：NAME - 进程名关键字（可选，留空显示全部）
 # 说明（健壮性处理）：
@@ -39,7 +39,7 @@ try {
     }
 } catch { }
 if (-not [string]::IsNullOrWhiteSpace($updateTime)) {
-    SayC $YELLOW '脚本' "更新时间: $updateTime"
+    SayC $YELLOW '信息' "更新时间: $updateTime"
 }
 
 # 入参（工具在执行前把 _p{XXX} 占位符替换为用户的输入值）

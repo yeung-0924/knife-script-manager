@@ -1,4 +1,4 @@
-# 更新时间: 2026-09-04 15:58:45
+# 更新时间: 2026-09-04 16:57:08
 # Kill-Process.ps1 - 结束进程（支持三种方式，任选其一或组合）
 # 参数（由程序代入，占位符 _p{XXX}）：
 #   PORT - 端口号（按端口杀）
@@ -44,7 +44,7 @@ try {
     }
 } catch { }
 if (-not [string]::IsNullOrWhiteSpace($updateTime)) {
-    SayC $YELLOW '脚本' "更新时间: $updateTime"
+    SayC $YELLOW '信息' "更新时间: $updateTime"
 }
 
 # 入参（工具在执行前把 _p{XXX} 占位符替换为用户的输入值）
