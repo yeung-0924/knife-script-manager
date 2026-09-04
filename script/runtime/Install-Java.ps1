@@ -1,4 +1,4 @@
-# 更新时间: 2026-09-04
+# 更新时间: 2026-09-04 14:59:35
 # Install-Java.ps1 - 按选择的发行版（Oracle OpenJDK / Microsoft OpenJDK / Alibaba Dragonwell）与版本下载并安装 JDK
 # 说明（几个关键健壮性处理）：
 #   1) 统一用 Write-Output 输出（走 success stream / stdout）。

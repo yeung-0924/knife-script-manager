@@ -1,4 +1,4 @@
-# 更新时间: 2026-09-04
+# 更新时间: 2026-09-04 14:59:35
 # Get-SystemInfo.ps1 - 显示本机系统信息（操作系统 / CPU / 内存 / 显卡 / 磁盘）
 # 说明（与 Get-IPInfo.ps1 相同的两个关键健壮性处理）：
 #   1) 统一用 Write-Output 输出（写入 success stream / stdout）。

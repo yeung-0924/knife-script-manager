@@ -1,5 +1,5 @@
 @echo off
-rem 更新时间: 2026-09-04
+rem 更新时间: 2026-09-04 14:59:35
 REM 网络连通性测试（ICMP 或 TCP 端口）。
 REM 占位符：_p{HOST} - 目标主机（IPv4 或域名，必填）
 REM         _p{PORT} - 目标端口（选填；填写后改为 TCP 测试，否则做 ICMP 测试）

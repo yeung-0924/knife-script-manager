@@ -1,5 +1,5 @@
 @echo off
-rem 更新时间: 2026-09-04
+rem 更新时间: 2026-09-04 14:59:35
 rem CMD 示例脚本：输出 Hello World 并回显传入的参数
 rem 运行参数：-Name <值>，默认 World
 set "NAME=World"
