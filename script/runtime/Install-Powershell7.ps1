@@ -461,9 +461,17 @@ if ([string]::IsNullOrWhiteSpace($pwshHome)) {
 # 也输出明确错误并退出，而不是崩溃。
 if ([string]::IsNullOrWhiteSpace($pwshHome)) {
     SayC $RED '异常' "未能确定 PowerShell 安装目录（pwshHome 为空），安装未成功，已终止"
+    SayC $YELLOW '诊断' "可能原因：① 本机未安装「应用安装程序(App Installer)」，Microsoft 源无法调用 winget；② 网络不可达 GitHub（受限网络常被墙），GitHub 回退也失败"
+    SayC $YELLOW '诊断' "解决：安装 App Installer 后重试，或改用「下载源=GitHub」并确保可访问 github.com（含镜像），亦可手动下载便携 zip 解压"
     exit 1
 }
-$pwshExe = Join-Path $pwshHome 'pwsh.exe'
+try {
+    # 双重保险：即便任何路径下 $pwshHome 仍为空，也在这里捕获并输出明确错误，绝不让含糊的 Join-Path 崩溃冒泡到用户日志
+    $pwshExe = Join-Path $pwshHome 'pwsh.exe'
+} catch {
+    SayC $RED '异常' "拼接 pwsh.exe 路径失败（pwshHome=$pwshHome）：$($_.Exception.Message)"
+    exit 1
+}
 if (-not (Test-Path $pwshExe)) {
     SayC $RED '异常' "安装目录存在但缺少 pwsh.exe: $pwshHome"
     exit 1
