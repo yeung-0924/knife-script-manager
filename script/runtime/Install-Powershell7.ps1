@@ -1,4 +1,4 @@
-# 更新时间: 2026-09-04 17:45:20
+# 更新时间: 2026-09-04 17:58:01
 # Install-Powershell7.ps1 - 安装 PowerShell 7（含 pwsh.exe）
 #   下载源（DOWNLOAD_SOURCE）：
 #     Microsoft = 通过 WinGet（Microsoft.PowerShell）从微软官方渠道安装（默认，二进制来自微软 CDN，系统级目录）
@@ -289,7 +289,7 @@ function Find-WinGetPwsh {
 }
 
 # ---- Microsoft 源：通过 WinGet 安装 Microsoft.PowerShell（二进制来自微软官方渠道）----
-# 返回解压/安装出的 PowerShell 目录绝对路径；失败（winget 缺失/安装异常/未找到）返回 $null，由调用方决定回退
+# 返回解压/安装出的 PowerShell 目录绝对路径；失败（winget 缺失/安装异常/未找到）返回 $null，由调用方如实报错（不再回退到其他下载源）
 function Install-ViaWinGet {
     param([string]$Major)
     # 定位 winget.exe：多层回退（PATH → App Execution Alias → WindowsApps 内真实二进制），提权下也能找到
@@ -401,33 +401,23 @@ function Ensure-PathHasScriptManagerEnv {
 
 # ---- 主流程：按下载源分支（Microsoft=WinGet / GitHub=便携 zip）；已存在则按需复用或重装 ----
 # 安装函数统一「成功返回目录路径 / 失败返回 $null」（不再 exit 1），由本段统一收口报错，
-# 避免回退场景下失败被赋成 $null 后漏到下游、抛出含糊的「参数绑定为 null」错误。
+# 避免失败被赋成 $null 后漏到下游、抛出含糊的「参数绑定为 null」错误。
 $pwshHome = $null
-$attemptedGitHub = $false
 if ($DownloadSource -ieq 'Microsoft') {
     # ==================== Microsoft 源：WinGet 安装（微软官方渠道）====================
+    # 用户选了什么就用什么：不再回退到 GitHub，失败如实提示原因与建议。
     $existingWinGet = $null
     if ($Overwrite -eq '否') { $existingWinGet = Find-WinGetPwsh -Major $major }
     if ($existingWinGet) {
         SayC $YELLOW '信息' "检测到已通过 WinGet 安装 PowerShell $major : $existingWinGet，跳过安装"
         $pwshHome = $existingWinGet
     } else {
-        # 覆盖模式：WinGet 重装会覆盖同版本，无需手动删除
-        # 注：Install-ViaWinGet 内部用 SayC(Write-Output) 打印诊断，调用方若直接 `$x = Func` 会把诊断行也收进 $x（变成数组），
+        # Install-ViaWinGet 内部用 SayC(Write-Output) 打印诊断，调用方若直接 `$x = Func` 会把诊断行也收进 $x（变成数组），
         # 导致路径变量变成诊断文本而非目录。return 值是 pipeline 最后一个元素，用 [-1] 只取它。
-        $wingetHome = @(Install-ViaWinGet -Major $major)[-1]
-        if ($wingetHome) {
-            $pwshHome = $wingetHome
-        } else {
-            SayC $YELLOW '信息' "Microsoft(WinGet) 安装失败，回退到 GitHub 下载源（便携 zip）"
-            $attemptedGitHub = $true
-            # 同上：Install-ViaGitHub 也用 SayC 打印诊断，必须 [-1] 取 return 值，避免诊断行污染路径变量
-            $pwshHome = @(Install-ViaGitHub -Major $major -InstallDir $InstallDir -Overwrite $Overwrite)[-1]
-        }
+        $pwshHome = @(Install-ViaWinGet -Major $major)[-1]
     }
 } else {
-    # ==================== GitHub 源：便携 zip（原有逻辑）====================
-    $attemptedGitHub = $true
+    # ==================== GitHub 源：便携 zip（用户显式选择）====================
     $existingPwsh = $null
     if ($Overwrite -eq '否') {
         $existingPwsh = Find-MatchingPwsh -Dir $InstallDir -Major $major
@@ -441,32 +431,17 @@ if ($DownloadSource -ieq 'Microsoft') {
     }
 }
 
-# ---- 兜底收口：两种下载源均未取得可用 pwsh 目录时，给出明确错误 + 诊断，绝不把 $null 传给 Join-Path ----
+# ---- 兜底收口：所选下载源未能产出可用 pwsh 目录时，如实提示原因与建议后退出（不回退、不堆异常） ----
 if ([string]::IsNullOrWhiteSpace($pwshHome)) {
     if ($DownloadSource -ieq 'Microsoft') {
-        SayC $RED '异常' "PowerShell $major 安装失败：Microsoft(WinGet) 源与 GitHub 回退均未能产出可用的 pwsh.exe"
+        SayC $RED '失败' "PowerShell $major 安装失败（下载源=Microsoft / WinGet）：未得到可用的 pwsh.exe"
+        SayC $YELLOW '原因' "常见原因：① 本机未安装「应用安装程序(App Installer)」，找不到 winget.exe；② 安全策略/组策略拦截了 WinGet 安装；③ WinGet 装到了非系统目录导致未能定位"
+        SayC $YELLOW '建议' "请确认已安装 App Installer 且可联网后重试；或直接把「下载源」改为 GitHub 再安装"
     } else {
-        SayC $RED '异常' "PowerShell $major 安装失败：GitHub 下载源未能产出可用的 pwsh.exe"
+        SayC $RED '失败' "PowerShell $major 安装失败（下载源=GitHub）：下载或解压未能产出可用的 pwsh.exe"
+        SayC $YELLOW '原因' "常见原因：① 网络不可达 GitHub（受限网络常被墙）；② 临时目录/安装目录无写入权限；③ 磁盘空间不足"
+        SayC $YELLOW '建议' "请确认可访问 github.com（或改用「下载源=Microsoft」）；亦可手动到 https://github.com/PowerShell/PowerShell/releases 下载便携 zip 解压到安装目录"
     }
-    # 诊断：帮助定位是 winget 缺失还是网络不可达（受限网络下 GitHub 常被墙，可改用 Microsoft 源或镜像）
-    $wg = Find-WingetExe
-    SayC $YELLOW '诊断' "winget.exe: $(if ($wg) { $wg } else { '未找到' })"
-    try {
-        $gh = Invoke-WebRequest -Uri 'https://github.com' -TimeoutSec 8 -UseBasicParsing -ErrorAction Stop
-        SayC $YELLOW '诊断' "github.com 访问: 可达 (HTTP $($gh.StatusCode))"
-    } catch {
-        SayC $YELLOW '诊断' "github.com 访问: 不可达 ($($_.Exception.Message))"
-    }
-    SayC $RED '异常' "排查建议：① 确认本机已安装「应用安装程序(App Installer)」且可联网；② 或改用「下载源=GitHub」并确保可访问 github.com（含镜像）；③ 亦可手动从 https://github.com/PowerShell/PowerShell/releases 下载便携 zip 解压"
-    exit 1
-}
-# 兜底：上方已统一收口 $null 情况；此处再在「失败点」保险一次——绝不直接把 $null 传给 Join-Path，
-# 否则会抛出含糊的「Cannot bind argument to parameter 'Path' because it is null」。即便上游收口被绕过，
-# 也输出明确错误并退出，而不是崩溃。
-if ([string]::IsNullOrWhiteSpace($pwshHome)) {
-    SayC $RED '异常' "未能确定 PowerShell 安装目录（pwshHome 为空），安装未成功，已终止"
-    SayC $YELLOW '诊断' "可能原因：① 本机未安装「应用安装程序(App Installer)」，Microsoft 源无法调用 winget；② 网络不可达 GitHub（受限网络常被墙），GitHub 回退也失败"
-    SayC $YELLOW '诊断' "解决：安装 App Installer 后重试，或改用「下载源=GitHub」并确保可访问 github.com（含镜像），亦可手动下载便携 zip 解压"
     exit 1
 }
 try {

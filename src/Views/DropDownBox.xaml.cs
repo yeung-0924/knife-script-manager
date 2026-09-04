@@ -1,6 +1,8 @@
 using System.Collections;
 using System.Windows;
 using System.Windows.Controls;
+using System.Windows.Interop;
+using System.Runtime.InteropServices;
 
 namespace ScriptManager.Views;
 
@@ -91,6 +93,7 @@ public partial class DropDownBox : UserControl
     public DropDownBox()
     {
         InitializeComponent();
+        Popup.Opened += Popup_Opened;
     }
 
     private void Input_PreviewMouseDown(object sender, System.Windows.Input.MouseButtonEventArgs e)
@@ -121,4 +124,44 @@ public partial class DropDownBox : UserControl
         if (!_syncingListSelection)
             Input.Focus();
     }
+
+    // 修正：WPF 的 Popup 弹出层是独立 HWND 且默认带 WS_EX_TOPMOST，
+    // 切到其它软件时仍会盖在最上层。这里在弹出后摘掉该样式，
+    // 使其仅在本程序激活时位于上层、切走后随主窗口一起落到其它程序之后。
+    private void Popup_Opened(object? sender, EventArgs e)
+    {
+        // 延迟到 Loaded 之后，确保弹出层 HWND 已创建并应用了 topmost 样式
+        Dispatcher.BeginInvoke(
+            System.Windows.Threading.DispatcherPriority.Loaded,
+            new System.Action(RemovePopupTopmost));
+    }
+
+    private void RemovePopupTopmost()
+    {
+        if (Popup.Child == null)
+            return;
+        if (PresentationSource.FromVisual(Popup.Child) is not HwndSource source || source.Handle == IntPtr.Zero)
+            return;
+        var hwnd = source.Handle;
+        // 摘掉 WS_EX_TOPMOST 扩展样式
+        SetWindowLong(hwnd, GWL_EXSTYLE, GetWindowLong(hwnd, GWL_EXSTYLE) & ~WS_EX_TOPMOST);
+        // 重新定位 Z 序（不移动、不改尺寸、不激活），使其遵守普通窗口层级
+        SetWindowPos(hwnd, HWND_NOTOPMOST, 0, 0, 0, 0, SWP_NOMOVE | SWP_NOSIZE | SWP_NOACTIVATE);
+    }
+
+    private const int GWL_EXSTYLE = -20;
+    private const int WS_EX_TOPMOST = 0x00000008;
+    private const int SWP_NOMOVE = 0x0002;
+    private const int SWP_NOSIZE = 0x0001;
+    private const int SWP_NOACTIVATE = 0x0010;
+    private static readonly IntPtr HWND_NOTOPMOST = new IntPtr(-2);
+
+    [DllImport("user32.dll")]
+    private static extern int GetWindowLong(IntPtr hWnd, int nIndex);
+
+    [DllImport("user32.dll")]
+    private static extern int SetWindowLong(IntPtr hWnd, int nIndex, int dwNewLong);
+
+    [DllImport("user32.dll")]
+    private static extern bool SetWindowPos(IntPtr hWnd, IntPtr hWndInsertAfter, int X, int Y, int cx, int cy, uint uFlags);
 }
