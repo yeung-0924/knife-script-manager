@@ -275,8 +275,8 @@ function Install-ViaWinGet {
         SayC $RED '异常' "WinGet 安装异常: $($_.Exception.Message)"
     }
     # 无论退出码都尝试定位 pwsh.exe（已安装时 WinGet 返回特定码而非 0）
-    $home = Find-WinGetPwsh -Major $Major
-    if ($home) { return $home }
+    $pwshHome = Find-WinGetPwsh -Major $Major
+    if ($pwshHome) { return $pwshHome }
     SayC $RED '异常' "WinGet 安装后未找到 pwsh.exe，可能安装失败或被安全策略拦截"
     return $null
 }
