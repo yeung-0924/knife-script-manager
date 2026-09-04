@@ -375,11 +375,12 @@ function Assemble-Dist {
         Write-Host "==> 已复制用户配置文件 -> $configDst (来源: $(Split-Path $configSrc -Leaf))"
     }
 
-    # 2.7) 文件夹变色资源：assets/fColors.icl + assets/folder-icons/*.ini
+    # 2.7) 文件夹变色资源：assets/fColors.icl + assets/folder-icons/desktop.template0~11.ini（共 12 份模板）
     #      -> outDir/config/（exe 同级，与 config.ini 同处程序自管目录），并设为 Hidden：
     #         交付目录不再额外留一个 assets\；隐藏后也不干扰用户查看 config\config.ini。
     #      运行期由 src/FolderCustomizer.cs 从 ExeDir\config\ 读取并生成各目录 desktop.ini
     #      （其它目录指向 ..\config\fColors.icl；config 自身指向 .\fColors.icl）。
+    #      图标分配：config=template0；script/lib=template8；log/cache/runtime=template1；子目录不给图标。
     $assetsSrc = Join-Path $rootDir "assets"
     if (Test-Path $assetsSrc) {
         if (-not (Test-Path $configDir)) { New-Item -ItemType Directory -Path $configDir -Force | Out-Null }
