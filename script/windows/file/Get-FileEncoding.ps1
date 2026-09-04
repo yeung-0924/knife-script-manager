@@ -1,4 +1,4 @@
-# 更新时间: 2026-09-04 14:59:35
+# 更新时间: 2026-09-04 15:58:45
 # Get-FileEncoding.ps1 - 获取文件编码：递归扫描目录下的所有文件，检测并显示其字符编码
 # 参数（由程序代入，占位符 _p{XXX}）：
 #   PATH - 文件或目录路径（必填）
@@ -317,6 +317,19 @@ $rootFullName = $rootItem.FullName
 Say '=========================================='
 Say ' 获取文件编码'
 Say '=========================================='
+# ---- 控制台同步打印「更新时间」：从脚本头部注释读取，便于用户贴错误日志时直接看到脚本版本时间 ----
+$updateTime = ''
+try {
+    $scriptPath = $PSCommandPath
+    if ([string]::IsNullOrWhiteSpace($scriptPath)) { $scriptPath = $MyInvocation.MyCommand.Path }
+    if (-not [string]::IsNullOrWhiteSpace($scriptPath)) {
+        $hdrLine = Get-Content -LiteralPath $scriptPath -TotalCount 1 -ErrorAction SilentlyContinue
+        if ($hdrLine -match '更新时间:\s*([\d\-: ]+)\s*$') { $updateTime = $Matches[1].Trim() }
+    }
+} catch { }
+if (-not [string]::IsNullOrWhiteSpace($updateTime)) {
+    SayC $YELLOW '脚本' "更新时间: $updateTime"
+}
 SayC $GREEN '入参' ("路径: {0}" -f $rootFullName)
 SayC $GREEN '入参' ("文件名: {0}" -f $(if ($nameFilter) { $nameFilter } else { '(空，不筛选)' }))
 SayC $GREEN '入参' ("字符编码: {0}" -f $(if ($encodingFilter) { $encodingFilter } else { '(空，不筛选)' }))

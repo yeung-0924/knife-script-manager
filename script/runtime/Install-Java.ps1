@@ -1,4 +1,4 @@
-# 更新时间: 2026-09-04 14:59:35
+# 更新时间: 2026-09-04 15:58:45
 # Install-Java.ps1 - 按选择的发行版（Oracle OpenJDK / Microsoft OpenJDK / Alibaba Dragonwell）与版本下载并安装 JDK
 # 说明（几个关键健壮性处理）：
 #   1) 统一用 Write-Output 输出（走 success stream / stdout）。
@@ -52,6 +52,19 @@ if ([string]::IsNullOrWhiteSpace($AddToPath))   { $AddToPath = '是' }
 Say '=========================================='
 Say " 自动安装 JDK（$Distro）"
 Say '=========================================='
+# ---- 控制台同步打印「更新时间」：从脚本头部注释读取，便于用户贴错误日志时直接看到脚本版本时间 ----
+$updateTime = ''
+try {
+    $scriptPath = $PSCommandPath
+    if ([string]::IsNullOrWhiteSpace($scriptPath)) { $scriptPath = $MyInvocation.MyCommand.Path }
+    if (-not [string]::IsNullOrWhiteSpace($scriptPath)) {
+        $hdrLine = Get-Content -LiteralPath $scriptPath -TotalCount 1 -ErrorAction SilentlyContinue
+        if ($hdrLine -match '更新时间:\s*([\d\-: ]+)\s*$') { $updateTime = $Matches[1].Trim() }
+    }
+} catch { }
+if (-not [string]::IsNullOrWhiteSpace($updateTime)) {
+    SayC $YELLOW '脚本' "更新时间: $updateTime"
+}
 SayC $GREEN '入参' "发行版: $Distro"
 SayC $GREEN '入参' "安装目录: $InstallDir"
 SayC $GREEN '入参' "版本: $Version"

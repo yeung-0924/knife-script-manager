@@ -1,4 +1,4 @@
-# 更新时间: 2026-09-04 14:59:35
+# 更新时间: 2026-09-04 15:58:45
 # Install-Python.ps1 - 自动安装 Python，支持两种下载源：
 #   A) 华为云镜像（默认，国内直连快）：下载 python.org 官方安装器并静默安装（/quiet），
 #      路径 https://mirrors.huaweicloud.com/python/<版本>/python-<版本>-<架构>.exe
@@ -49,6 +49,19 @@ if ([string]::IsNullOrWhiteSpace($AddToPath))      { $AddToPath = '是' }
 Say '=========================================='
 Say ' 自动安装 Python（官方安装器 / 解压即用）'
 Say '=========================================='
+# ---- 控制台同步打印「更新时间」：从脚本头部注释读取，便于用户贴错误日志时直接看到脚本版本时间 ----
+$updateTime = ''
+try {
+    $scriptPath = $PSCommandPath
+    if ([string]::IsNullOrWhiteSpace($scriptPath)) { $scriptPath = $MyInvocation.MyCommand.Path }
+    if (-not [string]::IsNullOrWhiteSpace($scriptPath)) {
+        $hdrLine = Get-Content -LiteralPath $scriptPath -TotalCount 1 -ErrorAction SilentlyContinue
+        if ($hdrLine -match '更新时间:\s*([\d\-: ]+)\s*$') { $updateTime = $Matches[1].Trim() }
+    }
+} catch { }
+if (-not [string]::IsNullOrWhiteSpace($updateTime)) {
+    SayC $YELLOW '脚本' "更新时间: $updateTime"
+}
 SayC $GREEN '入参' "安装目录: $InstallDir"
 SayC $GREEN '入参' "Python 版本: $Version"
 SayC $GREEN '入参' "下载源: $DownloadSource"

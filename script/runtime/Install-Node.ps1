@@ -1,4 +1,4 @@
-# 更新时间: 2026-09-04 14:59:35
+# 更新时间: 2026-09-04 15:58:45
 # Install-Node.ps1 - 从 nodejs.org 下载并安装 Node.js（LTS 大版本，解压即用）
 # 说明（与 Install-Java.ps1 / Install-Python.ps1 同一套约定）：
 #   1) 统一用 Write-Output 输出（走 success stream / stdout），避免重定向场景下日志丢失。
@@ -39,6 +39,19 @@ if ([string]::IsNullOrWhiteSpace($AddToPath)) { $AddToPath = '是' }
 Say '=========================================='
 Say ' 自动安装 Node.js（官方 LTS 解压即用包）'
 Say '=========================================='
+# ---- 控制台同步打印「更新时间」：从脚本头部注释读取，便于用户贴错误日志时直接看到脚本版本时间 ----
+$updateTime = ''
+try {
+    $scriptPath = $PSCommandPath
+    if ([string]::IsNullOrWhiteSpace($scriptPath)) { $scriptPath = $MyInvocation.MyCommand.Path }
+    if (-not [string]::IsNullOrWhiteSpace($scriptPath)) {
+        $hdrLine = Get-Content -LiteralPath $scriptPath -TotalCount 1 -ErrorAction SilentlyContinue
+        if ($hdrLine -match '更新时间:\s*([\d\-: ]+)\s*$') { $updateTime = $Matches[1].Trim() }
+    }
+} catch { }
+if (-not [string]::IsNullOrWhiteSpace($updateTime)) {
+    SayC $YELLOW '脚本' "更新时间: $updateTime"
+}
 SayC $GREEN '入参' "安装目录: $InstallDir"
 SayC $GREEN '入参' "Node 版本: $Version"
 SayC $GREEN '入参' "覆盖原文件: $Overwrite"

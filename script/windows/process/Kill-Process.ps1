@@ -1,4 +1,4 @@
-# 更新时间: 2026-09-04 14:59:35
+# 更新时间: 2026-09-04 15:58:45
 # Kill-Process.ps1 - 结束进程（支持三种方式，任选其一或组合）
 # 参数（由程序代入，占位符 _p{XXX}）：
 #   PORT - 端口号（按端口杀）
@@ -33,6 +33,19 @@ function SayC { param([string]$Color, [string]$Tag, [string]$Text) Write-Output 
 Say '=========================================='
 Say ' 结束进程（端口 / PID / 进程名）'
 Say '=========================================='
+# ---- 控制台同步打印「更新时间」：从脚本头部注释读取，便于用户贴错误日志时直接看到脚本版本时间 ----
+$updateTime = ''
+try {
+    $scriptPath = $PSCommandPath
+    if ([string]::IsNullOrWhiteSpace($scriptPath)) { $scriptPath = $MyInvocation.MyCommand.Path }
+    if (-not [string]::IsNullOrWhiteSpace($scriptPath)) {
+        $hdrLine = Get-Content -LiteralPath $scriptPath -TotalCount 1 -ErrorAction SilentlyContinue
+        if ($hdrLine -match '更新时间:\s*([\d\-: ]+)\s*$') { $updateTime = $Matches[1].Trim() }
+    }
+} catch { }
+if (-not [string]::IsNullOrWhiteSpace($updateTime)) {
+    SayC $YELLOW '脚本' "更新时间: $updateTime"
+}
 
 # 入参（工具在执行前把 _p{XXX} 占位符替换为用户的输入值）
 $PID_INPUT = "_p{PID}"

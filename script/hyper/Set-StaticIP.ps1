@@ -1,4 +1,12 @@
-# 更新时间: 2026-09-04 14:59:35
+# 更新时间: 2026-09-04 16:00:57
+# 控制台同步打印更新时间（从首行注释解析，便于用户贴日志时直接看到脚本版本时间）
+try {
+    $sp = $PSCommandPath; if (-not $sp) { $sp = $MyInvocation.MyCommand.Path }
+    if ($sp) {
+        $hdr = Get-Content -LiteralPath $sp -TotalCount 1 -ErrorAction SilentlyContinue
+        if ($hdr -match '更新时间:\s*([\d\-: ]+)\s*$') { Write-Host ("[脚本] 更新时间: " + $Matches[1].Trim()) }
+    }
+} catch { }
 # --- 颜色辅助（ANSI SGR）---
 # 入参/结果用 92 亮绿，信息用 93 亮黄，异常用 91 亮红
 $ESC = [char]27

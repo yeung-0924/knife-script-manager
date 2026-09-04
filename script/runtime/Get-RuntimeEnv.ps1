@@ -1,4 +1,4 @@
-# 更新时间: 2026-09-04 14:59:35
+# 更新时间: 2026-09-04 15:58:45
 # Get-RuntimeEnv.ps1 - 检测本机各语言运行时版本与可执行文件路径（未配置环境的语言输出为空）
 # 说明（关键健壮性处理）：
 #   1) 统一用 Write-Output 输出（走 success stream / stdout），与 Get-SystemInfo.ps1 同款处理。
@@ -119,6 +119,19 @@ $rustPath = if ($rustInfo) { $rustInfo.Path } else { '' }
 Say '=========================================='
 Say ' 运行环境检测'
 Say '=========================================='
+# ---- 控制台同步打印「更新时间」：从脚本头部注释读取，便于用户贴错误日志时直接看到脚本版本时间 ----
+$updateTime = ''
+try {
+    $scriptPath = $PSCommandPath
+    if ([string]::IsNullOrWhiteSpace($scriptPath)) { $scriptPath = $MyInvocation.MyCommand.Path }
+    if (-not [string]::IsNullOrWhiteSpace($scriptPath)) {
+        $hdrLine = Get-Content -LiteralPath $scriptPath -TotalCount 1 -ErrorAction SilentlyContinue
+        if ($hdrLine -match '更新时间:\s*([\d\-: ]+)\s*$') { $updateTime = $Matches[1].Trim() }
+    }
+} catch { }
+if (-not [string]::IsNullOrWhiteSpace($updateTime)) {
+    SayC $YELLOW '脚本' "更新时间: $updateTime"
+}
 SayC $YELLOW '信息' '各语言运行时版本与可执行文件路径'
 Say ''
 $rows = @(

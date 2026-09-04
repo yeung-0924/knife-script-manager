@@ -1,4 +1,4 @@
-# 更新时间: 2026-09-04 14:59:35
+# 更新时间: 2026-09-04 15:58:45
 # Get-IPInfo.ps1 - 显示本机网络适配器与 IP 信息
 # 说明（两个关键健壮性处理）：
 #   1) 统一用 Write-Output 输出（写入 success stream / stdout）。
@@ -43,6 +43,19 @@ $hasDnsClient  = [bool](Get-Command -Name Get-DnsClientServerAddress -ErrorActio
 Say '=========================================='
 Say ' 本机网络与 IP 信息'
 Say '=========================================='
+# ---- 控制台同步打印「更新时间」：从脚本头部注释读取，便于用户贴错误日志时直接看到脚本版本时间 ----
+$updateTime = ''
+try {
+    $scriptPath = $PSCommandPath
+    if ([string]::IsNullOrWhiteSpace($scriptPath)) { $scriptPath = $MyInvocation.MyCommand.Path }
+    if (-not [string]::IsNullOrWhiteSpace($scriptPath)) {
+        $hdrLine = Get-Content -LiteralPath $scriptPath -TotalCount 1 -ErrorAction SilentlyContinue
+        if ($hdrLine -match '更新时间:\s*([\d\-: ]+)\s*$') { $updateTime = $Matches[1].Trim() }
+    }
+} catch { }
+if (-not [string]::IsNullOrWhiteSpace($updateTime)) {
+    SayC $YELLOW '脚本' "更新时间: $updateTime"
+}
 
 # 1) 主要 IP：取「有默认路由」的接口 IPv4——这是对外通信实际使用的地址，最常被需要
 Say ''
