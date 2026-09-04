@@ -448,8 +448,6 @@ if (-not (Test-Path $pwshExe)) {
     exit 1
 }
 
-$pwshExe = Join-Path $pwshHome 'pwsh.exe'
-
 # ---- 验证（pwsh --version 输出 2>&1 合并后原色输出）----
 SayC $YELLOW '信息' '验证 pwsh --version:'
 $oldEap = $ErrorActionPreference
