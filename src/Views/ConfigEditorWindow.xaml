@@ -56,14 +56,24 @@
                                     SnapsToDevicePixels="True" Height="24" VerticalAlignment="Center"
                                     BorderBrush="{DynamicResource BrushBorder}"
                                     Background="{DynamicResource BrushPanelBg}">
-                                <TextBox Text="{Binding Value}" IsReadOnly="True"
-                                         BorderThickness="0" Background="Transparent"
-                                         VerticalContentAlignment="Center" Padding="6,0,10,0" />
+                                <Grid>
+                                    <TextBox Text="{Binding Value}" IsReadOnly="True"
+                                             BorderThickness="0" Background="Transparent"
+                                             VerticalContentAlignment="Center" Padding="6,0,10,0" />
+                                    <!-- 未自定义（Value 为空）时显示的默认相对路径占位符 -->
+                                    <TextBlock Text="{Binding Placeholder}"
+                                               Foreground="{DynamicResource BrushPlaceholder}"
+                                               Margin="6,0,0,0" VerticalAlignment="Center"
+                                               IsHitTestVisible="False"
+                                               Visibility="{Binding Value, Converter={x:Static local:StringEmptyToVisibilityConverter.Instance}}" />
+                                    <!-- 清空按钮：仅在已选择（Value 非空）时显示，点 × 回落到默认相对路径 -->
+                                    <Button Style="{StaticResource ClearButton}"
+                                            Click="Clear_Click"
+                                            ToolTip="{x:Static local:Strings.ClearButtonToolTip}"
+                                            Visibility="{Binding Value, Converter={x:Static local:StringNotEmptyToVisibilityConverter.Instance}}" />
+                                </Grid>
                             </Border>
                         </DockPanel>
-                        <TextBlock Grid.Column="1" Grid.Row="1"
-                                   Text="{Binding DefaultHint}"
-                                   Foreground="{DynamicResource BrushTextMuted}" FontSize="11" Margin="0,3,0,0" />
                     </Grid>
                 </DataTemplate>
             </ItemsControl.ItemTemplate>

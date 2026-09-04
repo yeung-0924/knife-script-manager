@@ -41,8 +41,8 @@ public static class Strings
         public const string MenuFile = "文件";
         public const string MenuSettings = "设置";
         public const string MenuEditConfig = "编辑配置...";
-        public const string TitleConfigEditor = "配置编辑 - config.ini";
-        public const string ConfigEditorNote = "修改后需重启程序生效。各项只能选择目录/文件，不可手动输入；点击「默认值」可一键恢复出厂设置。";
+        public const string TitleConfigEditor = "配置编辑";
+        public const string ConfigEditorNote = "修改后需重启程序生效。各项只能选择目录/文件（不可手动输入）；点击 × 可清除当前选择、恢复默认相对路径，或点「默认值」一键全部还原。";
         public const string ConfigEditorSaved = "已保存（重启后生效）";
         public const string ConfigEditorRestored = "已还原为默认值（重启后生效）";
         public const string ConfigEditorSaveFail = "保存失败：{0}";
