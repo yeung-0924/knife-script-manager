@@ -332,7 +332,7 @@ Write-Host "接收参数 Name = $Name"
   } catch { }
   if (-not [string]::IsNullOrWhiteSpace($updateTime)) { SayC $YELLOW '信息' "更新时间: $updateTime" }
   ```
-  其它语言同理：用各自方式读取首行注释里的 `更新时间:` 并原样输出一行。**目的**：用户贴错误日志时，AI 无需对照文件、直接从日志里就能读到脚本版本时间，立刻判断其运行的脚本是否为最新。模板 `templates/tpl_powershell.ps1` 已内置该段，新脚本直接复用；其它语言的模板也应在标题后加入等价的打印。
+  其它语言同理：用各自方式读取首行注释里的 `更新时间:` 并原样输出一行。**目的**：用户贴错误日志时，AI 无需对照文件、直接从日志里就能读到脚本版本时间，立刻判断其运行的脚本是否为最新。模板 `templates/tpl_*.xx`（含 cmd/bash/node/python/go/rust 等非 PowerShell 语言）均已内置等价打印段，新脚本直接复用：解释型语言从 `$0` / `__file__` 等读自身源码解析；编译型语言（Go / Rust）运行时源码已被写成随机临时文件（ScriptManager 用 `se_script_*.go` / `se_script_*.rs` 经 `go run` / `rustc` 执行），故不能用固定文件名 `//go:embed` / `include_str!`，改为 Go 用 `runtime.Caller(0)` 取自身源码路径、Rust 用 `std::env::current_exe()` 定位同目录同名 `.rs` 源码来解析「更新时间」。两者均不依赖文件真实名字，改名或随机名都照常工作。
 
 ---
 
