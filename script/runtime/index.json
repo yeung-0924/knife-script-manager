@@ -39,7 +39,7 @@
           "国内镜像",
           "GitHub 官方"
         ],
-        "placeholder": "国内镜像=清华 TUNA / 山大 镜像站（github-release 镜像，国内直连快，推荐，不依赖任何额外程序）；GitHub 官方=官方直连+ghproxy 回退"
+        "placeholder": "国内镜像=ghproxy.net 国内代理（直连 GitHub 发布资产，国内快，推荐，不依赖任何额外程序）；GitHub 官方=官方直连+ghproxy 回退"
       },
       {
         "name": "OVERWRITE",

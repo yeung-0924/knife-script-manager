@@ -1,7 +1,7 @@
 ﻿# 更新时间: 2026-09-05 13:15:00
 # Install-Powershell7.ps1 - 安装 PowerShell 7（含 pwsh.exe）
 #   下载源（DOWNLOAD_SOURCE）：
-#     国内镜像   = 清华 TUNA / 山大 镜像站（github-release 镜像，国内直连快，推荐，不依赖任何额外程序）
+#     国内镜像   = ghproxy.net 国内代理（直连 GitHub 发布资产，国内直连快，推荐，不依赖任何额外程序）
 #     GitHub 官方 = 从 GitHub 下载官方「解压即用」zip 包到自定义 runtime 目录（含 ghproxy 回退）
 # 说明（与 Install-Node.ps1 / Install-Go.ps1 同一套约定）：
 #   1) 统一用 Write-Output 输出（走 success stream / stdout），避免重定向场景下日志丢失。
@@ -248,12 +248,12 @@ function Install-ViaPortableZip {
     return $found.FullName
 }
 
-# ---- 国内镜像源：清华 TUNA 为主、山大兜底、GitHub 官方最后回退（不依赖 WinGet / App Installer 等额外程序）----
+# ---- 国内镜像源：ghproxy.net 为主、mirror.ghproxy.com 兜底、GitHub 官方直连最后回退（不依赖 WinGet / App Installer 等额外程序）----
 function Install-ViaMirror {
     param([string]$Major, [string]$InstallDir, [string]$Overwrite)
     $urls = @(
-        "https://mirrors.tuna.tsinghua.edu.cn/github-release/PowerShell/PowerShell/releases/download/v$Major.0/PowerShell-$Major.0-win-$pwshArch.zip",
-        "https://mirrors.sdu.edu.cn/github-release/PowerShell/PowerShell/releases/download/v$Major.0/PowerShell-$Major.0-win-$pwshArch.zip",
+        "https://ghproxy.net/https://github.com/PowerShell/PowerShell/releases/download/v$Major.0/PowerShell-$Major.0-win-$pwshArch.zip",
+        "https://mirror.ghproxy.com/https://github.com/PowerShell/PowerShell/releases/download/v$Major.0/PowerShell-$Major.0-win-$pwshArch.zip",
         "https://github.com/PowerShell/PowerShell/releases/download/v$Major.0/PowerShell-$Major.0-win-$pwshArch.zip"
     )
     return (Install-ViaPortableZip -Major $Major -InstallDir $InstallDir -Overwrite $Overwrite -Urls $urls)
@@ -355,7 +355,7 @@ function Ensure-PathHasScriptManagerEnv {
 # 避免失败被赋成 $null 后漏到下游、抛出含糊的「参数绑定为 null」错误。
 $pwshHome = $null
 if ($useMirror) {
-    # ==================== 国内镜像源：清华 TUNA / 山大（不依赖任何额外程序）====================
+    # ==================== 国内镜像源：ghproxy.net 国内代理（不依赖任何额外程序）====================
     $existingPwsh = $null
     if ($Overwrite -eq '否') { $existingPwsh = Find-MatchingPwsh -Dir $InstallDir -Major $major }
     if ($existingPwsh) {
@@ -383,9 +383,9 @@ if ($useMirror) {
 # ---- 兜底收口：所选下载源未能产出可用 pwsh 目录时，如实提示原因与建议后退出（不回退、不堆异常） ----
 if ([string]::IsNullOrWhiteSpace($pwshHome)) {
     if ($useMirror) {
-        SayC $RED '失败' "PowerShell $major 安装失败（下载源=国内镜像）：清华/山大镜像与 GitHub 官方回退均未能产出可用的 pwsh.exe"
-        SayC $YELLOW '原因' "常见原因：① 网络不可达（镜像站与 github 均无法访问）；② 临时目录/安装目录无写入权限；③ 磁盘空间不足"
-        SayC $YELLOW '建议' "请确认可访问 mirrors.tuna.tsinghua.edu.cn 或 github.com；亦可手动到 https://github.com/PowerShell/PowerShell/releases 下载便携 zip 解压到安装目录"
+        SayC $RED '失败' "PowerShell $major 安装失败（下载源=国内镜像）：ghproxy.net / mirror.ghproxy.com 代理与 GitHub 官方直连均未能产出可用的 pwsh.exe"
+        SayC $YELLOW '原因' "常见原因：① 网络不可达（ghproxy 代理与 github 均无法访问）；② 临时目录/安装目录无写入权限；③ 磁盘空间不足"
+        SayC $YELLOW '建议' "请确认可访问 ghproxy.net 或 github.com；亦可手动到 https://github.com/PowerShell/PowerShell/releases 下载便携 zip 解压到安装目录"
     } else {
         SayC $RED '失败' "PowerShell $major 安装失败（下载源=GitHub 官方）：下载或解压未能产出可用的 pwsh.exe"
         SayC $YELLOW '原因' "常见原因：① 网络不可达 GitHub（受限网络常被墙）；② 临时目录/安装目录无写入权限；③ 磁盘空间不足"
