@@ -1,8 +1,8 @@
-﻿# 更新时间: 2026-09-05 13:15:00
+# 更新时间: 2026-09-05 13:15:00
 # Install-Powershell7.ps1 - 安装 PowerShell 7（含 pwsh.exe）
 #   下载源（DOWNLOAD_SOURCE）：
 #     国内镜像   = ghproxy.net 国内代理（直连 GitHub 发布资产，国内直连快，推荐，不依赖任何额外程序）
-#     GitHub 官方 = 从 GitHub 下载官方「解压即用」zip 包到自定义 runtime 目录（含 ghproxy 回退）
+#     GitHub 官方 = 从 GitHub 官方直连下载「解压即用」zip 包（不回退到国内代理，选了官方就只用官方）
 # 说明（与 Install-Node.ps1 / Install-Go.ps1 同一套约定）：
 #   1) 统一用 Write-Output 输出（走 success stream / stdout），避免重定向场景下日志丢失。
 #   2) 下载用 HttpWebRequest 流式读取，在主线程每 5 秒打印一次进度。
@@ -119,7 +119,7 @@ if ($Overwrite -ne '是' -and $Overwrite -ne '否') {
     SayC $RED '异常' "覆盖原文件取值无效「$Overwrite」，应为 是/否"
     exit 1
 }
-# 归一化下载源：含 github 字样 -> GitHub 官方；国内镜像 -> 清华/山大镜像；其余无效
+# 归一化下载源：含 github 字样 -> GitHub 官方；国内镜像 -> 国内代理；其余无效（选了哪个源失败就报错，不跨源回退）
 $useGitHub = $DownloadSource -imatch 'github'
 $useMirror = $DownloadSource -eq '国内镜像'
 if (-not ($useGitHub -or $useMirror)) {
@@ -203,7 +203,7 @@ function Install-ViaPortableZip {
     $pwshVer = "$Major.0"
     SayC $YELLOW '信息' "PowerShell 版本: $pwshVer（大版本 $Major 的首个稳定版）"
 
-    # ---- 下载（流式 + 进度；按 $Urls 顺序回退，提升受限网络下的成功率）----
+    # ---- 下载（流式 + 进度；按 $Urls 顺序尝试；这些地址均属同一所选下载源，不做跨源回退）----
     $tmpDir = Join-Path $env:TEMP 'script-manager-pwsh'
     if (-not (Test-Path $tmpDir)) { New-Item -ItemType Directory -Path $tmpDir -Force | Out-Null }
     $zipPath = Join-Path $tmpDir "PowerShell-$pwshVer-win-$pwshArch.zip"
@@ -216,7 +216,7 @@ function Install-ViaPortableZip {
         if (Invoke-DownloadFile -Url $u -Dest $zipPath) { $ok = $true; break }
     }
     if (-not $ok) {
-        SayC $RED '异常' '所有下载源均失败：请检查网络（需可访问所选镜像/ GitHub），或手动下载便携 zip 后解压'
+        SayC $RED '异常' '所选下载源的所有候选地址均失败：请检查网络（需可访问所选源），或手动下载便携 zip 后解压'
         return $null
     }
     SayC $GREEN '结果' "下载完成: $zipPath"
@@ -248,24 +248,21 @@ function Install-ViaPortableZip {
     return $found.FullName
 }
 
-# ---- 国内镜像源：ghproxy.net 为主、mirror.ghproxy.com 兜底、GitHub 官方直连最后回退（不依赖 WinGet / App Installer 等额外程序）----
+# ---- 国内镜像源：仅用国内代理（ghproxy.net 为主、mirror.ghproxy.com 兜底）；不跨源回退到 GitHub 官方（选了国内镜像就只用国内代理）----
 function Install-ViaMirror {
     param([string]$Major, [string]$InstallDir, [string]$Overwrite)
     $urls = @(
         "https://ghproxy.net/https://github.com/PowerShell/PowerShell/releases/download/v$Major.0/PowerShell-$Major.0-win-$pwshArch.zip",
-        "https://mirror.ghproxy.com/https://github.com/PowerShell/PowerShell/releases/download/v$Major.0/PowerShell-$Major.0-win-$pwshArch.zip",
-        "https://github.com/PowerShell/PowerShell/releases/download/v$Major.0/PowerShell-$Major.0-win-$pwshArch.zip"
+        "https://mirror.ghproxy.com/https://github.com/PowerShell/PowerShell/releases/download/v$Major.0/PowerShell-$Major.0-win-$pwshArch.zip"
     )
     return (Install-ViaPortableZip -Major $Major -InstallDir $InstallDir -Overwrite $Overwrite -Urls $urls)
 }
 
-# ---- GitHub 官方源：官方直连 + ghproxy 镜像回退（解压即用便携 zip）----
+# ---- GitHub 官方源：仅官方直连（不回退到国内代理；选了官方就只用官方）----
 function Install-ViaGitHubPortable {
     param([string]$Major, [string]$InstallDir, [string]$Overwrite)
     $urls = @(
-        "https://github.com/PowerShell/PowerShell/releases/download/v$Major.0/PowerShell-$Major.0-win-$pwshArch.zip",
-        "https://mirror.ghproxy.com/https://github.com/PowerShell/PowerShell/releases/download/v$Major.0/PowerShell-$Major.0-win-$pwshArch.zip",
-        "https://ghproxy.net/https://github.com/PowerShell/PowerShell/releases/download/v$Major.0/PowerShell-$Major.0-win-$pwshArch.zip"
+        "https://github.com/PowerShell/PowerShell/releases/download/v$Major.0/PowerShell-$Major.0-win-$pwshArch.zip"
     )
     return (Install-ViaPortableZip -Major $Major -InstallDir $InstallDir -Overwrite $Overwrite -Urls $urls)
 }
@@ -366,7 +363,7 @@ if ($useMirror) {
         $pwshHome = @(Install-ViaMirror -Major $major -InstallDir $InstallDir -Overwrite $Overwrite)[-1]
     }
 } else {
-    # ==================== GitHub 官方源：便携 zip（含 ghproxy 回退）====================
+    # ==================== GitHub 官方源：便携 zip（仅官方直连，不回退国内代理）====================
     $existingPwsh = $null
     if ($Overwrite -eq '否') {
         $existingPwsh = Find-MatchingPwsh -Dir $InstallDir -Major $major
@@ -383,9 +380,9 @@ if ($useMirror) {
 # ---- 兜底收口：所选下载源未能产出可用 pwsh 目录时，如实提示原因与建议后退出（不回退、不堆异常） ----
 if ([string]::IsNullOrWhiteSpace($pwshHome)) {
     if ($useMirror) {
-        SayC $RED '失败' "PowerShell $major 安装失败（下载源=国内镜像）：ghproxy.net / mirror.ghproxy.com 代理与 GitHub 官方直连均未能产出可用的 pwsh.exe"
-        SayC $YELLOW '原因' "常见原因：① 网络不可达（ghproxy 代理与 github 均无法访问）；② 临时目录/安装目录无写入权限；③ 磁盘空间不足"
-        SayC $YELLOW '建议' "请确认可访问 ghproxy.net 或 github.com；亦可手动到 https://github.com/PowerShell/PowerShell/releases 下载便携 zip 解压到安装目录"
+        SayC $RED '失败' "PowerShell $major 安装失败（下载源=国内镜像）：ghproxy.net / mirror.ghproxy.com 均未能产出可用的 pwsh.exe"
+        SayC $YELLOW '原因' "常见原因：① 网络不可达（ghproxy.net / mirror.ghproxy.com 均无法访问）；② 临时目录/安装目录无写入权限；③ 磁盘空间不足"
+        SayC $YELLOW '建议' "请确认可访问 ghproxy.net 或 mirror.ghproxy.com；若仍不行可改用「下载源=GitHub 官方」重试；亦可手动到 https://github.com/PowerShell/PowerShell/releases 下载便携 zip 解压到安装目录"
     } else {
         SayC $RED '失败' "PowerShell $major 安装失败（下载源=GitHub 官方）：下载或解压未能产出可用的 pwsh.exe"
         SayC $YELLOW '原因' "常见原因：① 网络不可达 GitHub（受限网络常被墙）；② 临时目录/安装目录无写入权限；③ 磁盘空间不足"
