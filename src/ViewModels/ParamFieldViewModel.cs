@@ -32,6 +32,12 @@ public class ParamFieldViewModel : ViewModelBase
     /// <summary>是否为"选文件/选目录"型：文本框右侧显示浏览…按钮。</summary>
     public bool IsPath => IsFile || IsFolder;
 
+    /// <summary>浏览按钮图标：选文件(file)用 folder-open-dot，选目录(folder)用 folder-open（与工具栏「打开」一致）。</summary>
+    public System.Uri BrowseIconUri =>
+        IsFile
+            ? new System.Uri("pack://application:,,,/assets/images/button/folder-open-dot.svg", System.UriKind.Absolute)
+            : new System.Uri("pack://application:,,,/assets/images/button/folder-open.svg", System.UriKind.Absolute);
+
     /// <summary>清空当前值。下拉框（有 Options）一旦选中就无法再回到"未选"状态，靠此按钮清空。</summary>
     public ICommand ClearCommand { get; }
 

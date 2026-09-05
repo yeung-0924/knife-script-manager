@@ -40,7 +40,7 @@
                                         Click="Browse_Click"
                                         ToolTip="{x:Static local:Strings.BrowseButtonToolTip}">
                                     <svgc:SvgViewbox Width="13" Height="13"
-                                                     UriSource='pack://application:,,,/assets/images/button/folder-open.svg'
+                                                     UriSource="{Binding BrowseIconUri}"
                                                      HorizontalAlignment="Center" VerticalAlignment="Center" />
                                 </Button>
                                 <Border BorderThickness="1,1,0,1" CornerRadius="4,0,0,4"
@@ -63,7 +63,7 @@
                                         <!-- 未自定义（Value 为空）时显示的默认相对路径占位符 -->
                                         <TextBlock Text="{Binding Placeholder}"
                                                    Foreground="{DynamicResource BrushPlaceholder}"
-                                                   Margin="6,0,0,0" VerticalAlignment="Center"
+                                                   Margin="4,0,0,0" VerticalAlignment="Center"
                                                    IsHitTestVisible="False"
                                                    Visibility="{Binding Value, Converter={x:Static local:StringEmptyToVisibilityConverter.Instance}}" />
                                         <!-- 清空按钮：仅在已选择（Value 非空）时显示，点 × 回落到默认相对路径 -->
@@ -107,7 +107,7 @@
                                  Style="{StaticResource ClearableTextBoxInline}"
                                  PreviewTextInput="Timeout_PreviewTextInput" />
                         <TextBlock Text="{Binding Placeholder}"
-                                   Foreground="{DynamicResource BrushPlaceholder}" Margin="6,0,0,0"
+                                   Foreground="{DynamicResource BrushPlaceholder}" Margin="4,0,0,0"
                                    VerticalAlignment="Center" IsHitTestVisible="False"
                                    Visibility="{Binding Value, Converter={x:Static local:StringEmptyToVisibilityConverter.Instance}}" />
                         <Button Style="{StaticResource ClearButton}"

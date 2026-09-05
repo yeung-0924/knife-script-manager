@@ -211,6 +211,12 @@ public class ConfigRow : INotifyPropertyChanged
     }
 
     public event PropertyChangedEventHandler? PropertyChanged;
+
+    /// <summary>浏览按钮图标：选文件(file)用 folder-open-dot，选目录(folder)用 folder-open（与工具栏「打开」一致）。</summary>
+    public System.Uri BrowseIconUri =>
+        Kind == "file"
+            ? new System.Uri("pack://application:,,,/assets/images/button/folder-open-dot.svg", System.UriKind.Absolute)
+            : new System.Uri("pack://application:,,,/assets/images/button/folder-open.svg", System.UriKind.Absolute);
 }
 
 /// <summary>默认执行超时(秒) 绑定模型：配置编辑器内唯一允许手输的字段；空白 = 不限制（0）。</summary>

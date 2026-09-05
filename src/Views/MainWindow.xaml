@@ -390,7 +390,7 @@
                                                                       ToolTip="{Binding Placeholder}" />
                                                     <TextBlock Text="{Binding Placeholder}"
                                                                Foreground="{DynamicResource BrushPlaceholder}"
-                                                               Margin="6,0,0,0" VerticalAlignment="Center"
+                                                               Margin="4,0,0,0" VerticalAlignment="Center"
                                                                IsHitTestVisible="False"
                                                                Visibility="{Binding Value, Converter={x:Static local:StringEmptyToVisibilityConverter.Instance}}" />
                                                     <!-- 清空按钮：仅在选择框有值时显示（下拉框选中后无法回到"未选"，靠它清空） -->
@@ -414,7 +414,7 @@
                                                             Width="24" Height="24" Padding="0"
                                                             Margin="0" VerticalAlignment="Center">
                                                         <svgc:SvgViewbox Width="13" Height="13"
-                                                                         UriSource='pack://application:,,,/assets/images/button/folder-open.svg'
+                                                                         UriSource="{Binding BrowseIconUri}"
                                                                          HorizontalAlignment="Center" VerticalAlignment="Center" />
                                                     </Button>
                                                     <!-- 左侧输入框外观：右边框去掉、右圆角去掉，与右侧按钮拼合。
@@ -446,7 +446,7 @@
                                                                      Style="{StaticResource ClearableTextBoxInline}" />
                                                             <TextBlock Text="{Binding Placeholder}"
                                                                        Foreground="{DynamicResource BrushPlaceholder}"
-                                                                       Margin="6,0,0,0" VerticalAlignment="Center"
+                                                                       Margin="4,0,0,0" VerticalAlignment="Center"
                                                                        IsHitTestVisible="False"
                                                                        Visibility="{Binding Value, Converter={x:Static local:StringEmptyToVisibilityConverter.Instance}}" />
                                                             <!-- 清空按钮：仅在输入框有值时显示 -->
@@ -474,7 +474,7 @@
                                                     </TextBox>
                                                     <TextBlock Text="{Binding Placeholder}"
                                                                Foreground="{DynamicResource BrushPlaceholder}"
-                                                               Margin="6,0,0,0" VerticalAlignment="Center"
+                                                               Margin="4,0,0,0" VerticalAlignment="Center"
                                                                IsHitTestVisible="False"
                                                                Visibility="{Binding Value, Converter={x:Static local:StringEmptyToVisibilityConverter.Instance}}" />
                                                     <!-- 清空按钮：仅在输入框有值时显示 -->
