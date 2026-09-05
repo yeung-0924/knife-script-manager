@@ -33,13 +33,13 @@
       {
         "name": "DOWNLOAD_SOURCE",
         "label": "下载源",
-        "default": "Microsoft",
+        "default": "国内镜像",
         "required": true,
         "options": [
-          "Microsoft",
-          "GitHub"
+          "国内镜像",
+          "GitHub 官方"
         ],
-        "placeholder": "Microsoft=通过 WinGet 从微软官方渠道安装（默认）；GitHub=直接下载官方便携 zip 包到自定义目录"
+        "placeholder": "国内镜像=清华 TUNA / 山大 镜像站（github-release 镜像，国内直连快，推荐，不依赖任何额外程序）；GitHub 官方=官方直连+ghproxy 回退"
       },
       {
         "name": "OVERWRITE",
